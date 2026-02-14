@@ -4,9 +4,7 @@ Inspira AI is an agentic AI-powered furniture search engine. It allows users to 
 
 This project was built as a technical assessment, focusing on **retrieval quality, ranking precision, and internal tunability**.
 
-```markdown
 For a deep dive into the system architecture, design choices, and evaluation methodology, please refer to the [Technical Assessment Response](.docs/18-technical-assessment-response.md).
-```
 
 
 ---
