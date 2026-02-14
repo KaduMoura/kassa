@@ -16,6 +16,7 @@ interface EvalResult {
     hitAt1: boolean;
     hitAt3: boolean;
     hitAt5: boolean;
+    hitAt10: boolean;
     mrr: number;
 }
 
@@ -103,6 +104,7 @@ async function runTest(testCase: GoldenCase, apiUrl: string, apiKey: string, str
             hitAt1: rank === 1,
             hitAt3: rank > 0 && rank <= 3,
             hitAt5: rank > 0 && rank <= 5,
+            hitAt10: rank > 0 && rank <= 10,
             mrr: rank > 0 ? 1 / rank : 0
         };
     } catch (error: any) {
@@ -114,10 +116,12 @@ async function runTest(testCase: GoldenCase, apiUrl: string, apiKey: string, str
 function printReport(baseline: EvalResult[], augmented: EvalResult[]) {
     const calcMetrics = (results: EvalResult[]) => {
         const total = results.length;
-        if (total === 0) return { h1: 0, h5: 0, mrr: 0 };
+        if (total === 0) return { h1: 0, h3: 0, h5: 0, h10: 0, mrr: 0 };
         return {
             h1: (results.filter(r => r.hitAt1).length / total) * 100,
+            h3: (results.filter(r => r.hitAt3).length / total) * 100,
             h5: (results.filter(r => r.hitAt5).length / total) * 100,
+            h10: (results.filter(r => r.hitAt10).length / total) * 100,
             mrr: results.reduce((sum, r) => sum + r.mrr, 0) / total
         };
     };
@@ -131,7 +135,9 @@ function printReport(baseline: EvalResult[], augmented: EvalResult[]) {
     console.log(`Metric           Baseline (Img)    Augmented (+P)    Prompt Lift`);
     console.log('-'.repeat(60));
     console.log(`Hit@1 Precision  ${bMetrics.h1.toFixed(1).padEnd(17)} ${aMetrics.h1.toFixed(1).padEnd(17)} ${(aMetrics.h1 - bMetrics.h1).toFixed(1)}%`);
+    console.log(`Hit@3 Coverage   ${bMetrics.h3.toFixed(1).padEnd(17)} ${aMetrics.h3.toFixed(1).padEnd(17)} ${(aMetrics.h3 - bMetrics.h3).toFixed(1)}%`);
     console.log(`Hit@5 Coverage   ${bMetrics.h5.toFixed(1).padEnd(17)} ${aMetrics.h5.toFixed(1).padEnd(17)} ${(aMetrics.h5 - bMetrics.h5).toFixed(1)}%`);
+    console.log(`Hit@10 Coverage  ${bMetrics.h10.toFixed(1).padEnd(17)} ${aMetrics.h10.toFixed(1).padEnd(17)} ${(aMetrics.h10 - bMetrics.h10).toFixed(1)}%`);
     console.log(`Mean MRR         ${bMetrics.mrr.toFixed(4).padEnd(17)} ${aMetrics.mrr.toFixed(4).padEnd(17)} ${(aMetrics.mrr - bMetrics.mrr).toFixed(4)}`);
     console.log('='.repeat(60));
     console.log(`Report generated on: ${new Date().toLocaleString()}\n`);

@@ -1,6 +1,6 @@
 
 import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
-import { ImageSignals, CandidateSummary, SearchResponse, ScoredCandidate, SearchTimings, SearchNotice } from '../domain/ai/schemas';
+import { ImageSignals, CandidateSummary, SearchResponse, ScoredCandidate, SearchTimings, SearchNotice, AiErrorCode } from '../domain/ai/schemas';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
 import { HeuristicScorer } from '../domain/ranking/heuristic-scorer';
 import { AppConfigService } from '../config/app-config.service';
@@ -49,7 +49,7 @@ export class ImageSearchService {
             } catch (error) {
                 lastError = error;
                 const err = error as { code?: string; status?: number; message?: string };
-                const isTransient = err.code === 'AI_RATE_LIMIT' || (err.status && err.status >= 500) || err.code === 'AI_NETWORK_ERROR';
+                const isTransient = err.code === AiErrorCode.PROVIDER_RATE_LIMIT || (err.status && err.status >= 500) || err.code === AiErrorCode.PROVIDER_NETWORK_ERROR;
 
                 if (attempt < maxRetries && isTransient) {
                     this.logger?.warn(`[ImageSearchService] Retrying ${stageName} (attempt ${attempt + 1}/${maxRetries}) due to transient error: `, err.message);
@@ -152,7 +152,7 @@ export class ImageSearchService {
         const { products: initialCandidates, plan: retrievalPlan } = await this.catalogRepository.findCandidates({
             category: useStrictFilters ? signals.categoryGuess.value : undefined,
             type: useStrictFilters && signals.typeGuess.confidence >= config.minTypeConfidence ? signals.typeGuess.value : undefined,
-            keywords: signals.keywords,
+            keywords: signals.keywords.slice(0, config.maxKeywordsForRetrieval),
             limit: config.candidateTopN,
             minCandidates: config.minCandidates
         });

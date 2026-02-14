@@ -86,13 +86,13 @@ async function bootstrap() {
 
             if (error instanceof AiError) {
                 const statusMap: Record<AiErrorCode, number> = {
-                    [AiErrorCode.AI_AUTH_ERROR]: 401,
-                    [AiErrorCode.AI_RATE_LIMIT]: 429,
-                    [AiErrorCode.AI_TIMEOUT]: 408,
-                    [AiErrorCode.AI_INVALID_OUTPUT]: 502,
-                    [AiErrorCode.AI_NETWORK_ERROR]: 503,
-                    [AiErrorCode.AI_INTERNAL_ERROR]: 500,
-                    [AiErrorCode.AI_CONTEXT_TOO_LARGE]: 413,
+                    [AiErrorCode.PROVIDER_AUTH_ERROR]: 401,
+                    [AiErrorCode.PROVIDER_RATE_LIMIT]: 429,
+                    [AiErrorCode.PROVIDER_TIMEOUT]: 408,
+                    [AiErrorCode.PROVIDER_INVALID_RESPONSE]: 502,
+                    [AiErrorCode.PROVIDER_NETWORK_ERROR]: 503,
+                    [AiErrorCode.INTERNAL_ERROR]: 500,
+                    [AiErrorCode.PROVIDER_CONTEXT_TOO_LARGE]: 413,
                 };
 
                 const status = statusMap[error.code] || 500;

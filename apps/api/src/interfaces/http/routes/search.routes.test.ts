@@ -39,7 +39,9 @@ describe('Search Routes Integration', () => {
         });
 
         expect(response.statusCode).toBe(400);
-        expect(JSON.parse(response.body).error.message).toContain('Invalid headers');
+        const body = JSON.parse(response.body);
+        expect(body.error.code).toBe('VALIDATION_HEADERS');
+        expect(body.error.message).toContain('Invalid headers');
     });
 
     it('should return 400 if not multipart', async () => {
@@ -52,12 +54,14 @@ describe('Search Routes Integration', () => {
         });
 
         expect(response.statusCode).toBe(400);
-        expect(JSON.parse(response.body).error.message).toContain('Expected multipart');
+        const body = JSON.parse(response.body);
+        expect(body.error.code).toBe('VALIDATION_MULTIPART');
+        expect(body.error.message).toContain('Expected multipart');
     });
 
     it('should return 400 for invalid mimetype', async () => {
         const boundary = '----boundary';
-        const body = [
+        const failBody = [
             `--${boundary}`,
             'Content-Disposition: form-data; name="image"; filename="test.txt"',
             'Content-Type: text/plain',
@@ -73,11 +77,13 @@ describe('Search Routes Integration', () => {
                 'x-ai-api-key': 'test-key',
                 'content-type': `multipart/form-data; boundary=${boundary}`
             },
-            payload: body
+            payload: failBody
         });
 
         expect(response.statusCode).toBe(400);
-        expect(JSON.parse(response.body).error.message).toContain('Invalid file type');
+        const body = JSON.parse(response.body);
+        expect(body.error.code).toBe('VALIDATION_IMAGE_FORMAT');
+        expect(body.error.message).toContain('Invalid file type');
     });
 
     it('should return 400 for too long prompt', async () => {
@@ -102,7 +108,9 @@ describe('Search Routes Integration', () => {
         });
 
         expect(response.statusCode).toBe(400);
-        expect(JSON.parse(response.body).error.message).toContain('Invalid prompt');
+        const errorBody = JSON.parse(response.body);
+        expect(errorBody.error.code).toBe('VALIDATION_PROMPT');
+        expect(errorBody.error.message).toContain('Invalid prompt');
     });
 
     it('should return 200 on successful pipeline', async () => {

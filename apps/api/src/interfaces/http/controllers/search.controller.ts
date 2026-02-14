@@ -28,7 +28,7 @@ export class SearchController {
             return reply.code(400).send({
                 data: null,
                 error: {
-                    code: 'VALIDATION_ERROR',
+                    code: 'VALIDATION_HEADERS',
                     message: 'Invalid headers',
                     details: headerResult.error.format()
                 },
@@ -43,7 +43,7 @@ export class SearchController {
             return reply.code(400).send({
                 data: null,
                 error: {
-                    code: 'VALIDATION_ERROR',
+                    code: 'VALIDATION_MULTIPART',
                     message: 'Expected multipart/form-data'
                 },
                 meta
@@ -63,7 +63,7 @@ export class SearchController {
                     return reply.code(400).send({
                         data: null,
                         error: {
-                            code: 'VALIDATION_ERROR',
+                            code: 'VALIDATION_IMAGE_FORMAT',
                             message: `Invalid file type: ${part.mimetype}. Allowed types: ${allowedMimeTypes.join(', ')}`
                         },
                         meta
@@ -76,7 +76,7 @@ export class SearchController {
                     return reply.code(400).send({
                         data: null,
                         error: {
-                            code: 'VALIDATION_ERROR',
+                            code: 'VALIDATION_IMAGE_CONTENT',
                             message: 'Invalid image content: Magic bytes do not match expected format.'
                         },
                         meta
@@ -93,7 +93,7 @@ export class SearchController {
                         return reply.code(400).send({
                             data: null,
                             error: {
-                                code: 'VALIDATION_ERROR',
+                                code: 'VALIDATION_PROMPT',
                                 message: 'Invalid prompt',
                                 details: bodyResult.error.format()
                             },
@@ -109,7 +109,7 @@ export class SearchController {
                             return reply.code(400).send({
                                 data: null,
                                 error: {
-                                    code: 'VALIDATION_ERROR',
+                                    code: 'VALIDATION_CLIENT_CONTEXT',
                                     message: 'Invalid clientContext',
                                     details: bodyResult.error.format()
                                 },
@@ -121,7 +121,7 @@ export class SearchController {
                         return reply.code(400).send({
                             data: null,
                             error: {
-                                code: 'VALIDATION_ERROR',
+                                code: 'VALIDATION_CLIENT_CONTEXT',
                                 message: 'clientContext must be a valid JSON string'
                             },
                             meta
@@ -135,7 +135,7 @@ export class SearchController {
             return reply.code(400).send({
                 data: null,
                 error: {
-                    code: 'VALIDATION_ERROR',
+                    code: 'VALIDATION_MISSING_IMAGE',
                     message: 'Missing image file in multipart body'
                 },
                 meta
@@ -152,7 +152,7 @@ export class SearchController {
                 return reply.code(400).send({
                     data: null,
                     error: {
-                        code: 'VALIDATION_ERROR',
+                        code: 'VALIDATION_IMAGE_TOO_SMALL',
                         message: `Image too small (${metadata.width}x${metadata.height}). Minimum required: ${minDim}x${minDim}.`,
                         details: { width: metadata.width, height: metadata.height, required: minDim }
                     },
