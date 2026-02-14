@@ -10,6 +10,7 @@ export async function adminRoutes(server: FastifyInstance) {
 
     server.get('/config', (req, res) => controller.getConfig(req, res));
     server.patch('/config', (req, res) => controller.updateConfig(req, res));
+    server.put('/config', (req, res) => controller.updateConfig(req, res));
     server.post('/config/reset', (req, res) => controller.resetConfig(req, res));
     server.get('/telemetry', (req, res) => controller.getTelemetry(req, res));
     server.get('/telemetry/export', (req, res) => controller.exportTelemetry(req, res));

@@ -49,7 +49,7 @@ async function bootstrap() {
 
         await server.register(multipart, {
             limits: {
-                fileSize: 10 * 1024 * 1024, // 10MB
+                fileSize: env.MAX_UPLOAD_BYTES,
             },
         });
 

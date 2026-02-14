@@ -10,7 +10,9 @@
         "test": "vitest run",
         "lint": "eslint src/**/*.ts",
         "typecheck": "tsc --noEmit",
-        "seed": "tsx scripts/seed-catalog.ts"
+        "seed": "tsx scripts/seed-catalog.ts",
+        "eval:golden": "tsx scripts/evaluate-quality.ts",
+        "demo": "pnpm build && pnpm start"
     },
     "dependencies": {
         "@fastify/cors": "^9.0.1",
