@@ -37,6 +37,45 @@ export const CandidateSummarySchema = z.object({
 
 export type CandidateSummary = z.infer<typeof CandidateSummarySchema>;
 
+export enum MatchBand {
+    HIGH = 'HIGH',
+    MEDIUM = 'MEDIUM',
+    LOW = 'LOW',
+}
+
+export const ScoredCandidateSchema = CandidateSummarySchema.extend({
+    score: z.number(),
+    matchBand: z.nativeEnum(MatchBand),
+    reasons: z.array(z.string()).default([]),
+});
+
+export type ScoredCandidate = z.infer<typeof ScoredCandidateSchema>;
+
+export interface SearchTimings {
+    totalMs: number;
+    stage1Ms: number;
+    mongoMs: number;
+    stage2Ms: number;
+}
+
+export interface SearchNotice {
+    code: string;
+    message: string;
+}
+
+export interface SearchResponse {
+    query: {
+        prompt?: string;
+        signals: ImageSignals;
+    };
+    results: ScoredCandidate[];
+    meta: {
+        requestId: string;
+        timings: SearchTimings;
+        notices: SearchNotice[];
+    };
+}
+
 export const RerankResultSchema = z.object({
     rankedIds: z.array(z.string()),
     reasons: z.record(z.string(), z.array(z.string())).optional(),

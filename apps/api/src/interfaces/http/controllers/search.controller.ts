@@ -52,7 +52,7 @@ export class SearchController {
         }
 
         // 3. Coordinate Service
-        const results = await this.imageSearchService.searchByImage(
+        const searchResults = await this.imageSearchService.searchByImage(
             imageBuffer,
             mimeType,
             apiKey,
@@ -60,6 +60,13 @@ export class SearchController {
             userPrompt
         );
 
-        return reply.code(200).send(results);
+        return reply.code(200).send({
+            data: {
+                query: searchResults.query,
+                results: searchResults.results
+            },
+            error: null,
+            meta: searchResults.meta
+        });
     }
 }

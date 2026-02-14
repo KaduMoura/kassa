@@ -1,21 +1,16 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
+import { appConfigService } from '../../../config/app-config.service';
 
 export class AdminController {
     /**
      * Get system configuration (e.g., search weights, thresholds)
      */
     async getConfig(request: FastifyRequest, reply: FastifyReply) {
-        // Mock data - in a real app, this would come from high-availability KV or DB
+        const config = appConfigService.getConfig();
         return {
-            searchWeights: {
-                vision: 0.7,
-                text: 0.3
-            },
-            thresholds: {
-                minConfidence: 0.6,
-                maxCandidates: 10
-            },
-            lastUpdated: new Date().toISOString()
+            data: config,
+            meta: { requestId: request.id },
+            error: null
         };
     }
 
@@ -23,15 +18,37 @@ export class AdminController {
      * Update system configuration
      */
     async updateConfig(request: FastifyRequest, reply: FastifyReply) {
-        const body = request.body;
+        const body = request.body as any;
 
-        request.log.info({ body }, 'Updating admin configuration');
+        try {
+            const updatedConfig = appConfigService.updateConfig(body);
+            request.log.info({ body }, 'Updated admin configuration');
 
-        // Placeholder for persistent update logic
+            return {
+                data: updatedConfig,
+                message: 'Configuration updated successfully (volatile)',
+                meta: { requestId: request.id },
+                error: null
+            };
+        } catch (error: any) {
+            return reply.code(400).send({
+                error: 'Invalid configuration',
+                details: error.errors || error.message,
+                meta: { requestId: request.id }
+            });
+        }
+    }
+
+    /**
+     * Reset system configuration to defaults
+     */
+    async resetConfig(request: FastifyRequest, reply: FastifyReply) {
+        const config = appConfigService.resetToDefaults();
         return {
-            success: true,
-            message: 'Configuration updated successfully (volatile)',
-            updatedAt: new Date().toISOString()
+            data: config,
+            message: 'Configuration reset to defaults',
+            meta: { requestId: request.id },
+            error: null
         };
     }
 }

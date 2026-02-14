@@ -14,4 +14,5 @@ export async function adminRoutes(server: FastifyInstance) {
 
     server.get('/config', (req, res) => controller.getConfig(req, res));
     server.patch('/config', (req, res) => controller.updateConfig(req, res));
+    server.post('/config/reset', (req, res) => controller.resetConfig(req, res));
 }
