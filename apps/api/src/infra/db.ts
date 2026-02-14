@@ -15,7 +15,7 @@ export async function connectToDatabase(): Promise<Db> {
         const dbName = new URL(env.MONGO_URI).pathname.replace('/', '') || 'catalog';
         db = client.db(dbName);
 
-        console.log('✅ Connected to MongoDB Catalog');
+        console.info('✅ Connected to MongoDB Catalog');
         return db;
     } catch (error) {
         console.error('❌ MongoDB Connection Error:', error);
@@ -28,7 +28,7 @@ export async function disconnectFromDatabase(): Promise<void> {
         await client.close();
         client = null;
         db = null;
-        console.log('🔌 Disconnected from MongoDB');
+        console.info('🔌 Disconnected from MongoDB');
     }
 }
 

@@ -1,4 +1,4 @@
-import { Db, Collection, Filter } from 'mongodb';
+import { Db, Collection, Filter, ObjectId } from 'mongodb';
 import { Product, SearchCriteria } from '../../domain/product';
 import { getDb } from '../db';
 
@@ -83,8 +83,15 @@ export class CatalogRepository {
     }
 
     async findById(id: string): Promise<Product | null> {
-        // Basic implementation, can be extended with ObjectId handling
-        return this.collection.findOne({ title: id } as any); // Sample implementation
+        try {
+            return this.collection.findOne({ _id: new ObjectId(id) } as any);
+        } catch {
+            return null; // Invalid ObjectId
+        }
+    }
+
+    async findByTitle(title: string): Promise<Product | null> {
+        return this.collection.findOne({ title: title } as any);
     }
 
     async getSample(): Promise<Product | null> {

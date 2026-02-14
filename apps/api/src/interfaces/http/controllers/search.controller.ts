@@ -23,6 +23,7 @@ export class SearchController {
             return reply.code(400).send({ error: 'Expected multipart/form-data' });
         }
 
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
         const parts = request.parts();
         let imageBuffer: Buffer | null = null;
         let mimeType = '';
@@ -30,10 +31,19 @@ export class SearchController {
 
         for await (const part of parts) {
             if (part.type === 'file' && part.fieldname === 'image') {
+                if (!allowedMimeTypes.includes(part.mimetype)) {
+                    return reply.code(400).send({
+                        error: `Invalid file type: ${part.mimetype}. Allowed types: ${allowedMimeTypes.join(', ')}`
+                    });
+                }
                 imageBuffer = await part.toBuffer();
                 mimeType = part.mimetype;
             } else if (part.type === 'field' && part.fieldname === 'prompt') {
-                userPrompt = part.value as string;
+                const promptValue = part.value as string;
+                if (promptValue.length > 1000) {
+                    return reply.code(400).send({ error: 'Prompt too long (max 1000 chars)' });
+                }
+                userPrompt = promptValue;
             }
         }
 

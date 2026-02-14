@@ -3,11 +3,18 @@ import { ImageSignals, CandidateSummary } from '../domain/ai/schemas';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
 import { Product } from '../domain/product';
 
+export interface Logger {
+    info(msg: string, ...args: any[]): void;
+    error(msg: string, ...args: any[]): void;
+    warn(msg: string, ...args: any[]): void;
+}
+
 export class ImageSearchService {
     constructor(
         private readonly visionExtractor: VisionSignalExtractor,
         private readonly catalogRepository: CatalogRepository,
-        private readonly reranker: CatalogReranker
+        private readonly reranker: CatalogReranker,
+        private readonly logger?: Logger
     ) { }
 
     /**
@@ -82,7 +89,7 @@ export class ImageSearchService {
                 candidates: rerankedCandidates,
             };
         } catch (error) {
-            console.error('[ImageSearchService] Reranking failed, falling back to heuristic order:', error);
+            this.logger?.error(`[ImageSearchService] Reranking failed for request ${requestId}, falling back to heuristic order:`, error);
             // Fallback to initialOrder if Stage 2 fails
             return {
                 signals,

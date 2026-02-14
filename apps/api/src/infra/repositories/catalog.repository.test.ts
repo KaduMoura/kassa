@@ -70,4 +70,27 @@ describe('CatalogRepository', () => {
             $or: expect.any(Array)
         }));
     });
+
+    describe('findById', () => {
+        it('should call findOne with ObjectId', async () => {
+            const id = '507f1f77bcf86cd799439011';
+            await repository.findById(id);
+            expect(mockCollection.findOne).toHaveBeenCalledWith(expect.objectContaining({
+                _id: expect.any(Object)
+            }));
+        });
+
+        it('should return null for invalid ObjectId', async () => {
+            const result = await repository.findById('invalid');
+            expect(result).toBeNull();
+            expect(mockCollection.findOne).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('findByTitle', () => {
+        it('should call findOne with title', async () => {
+            await repository.findByTitle('My Product');
+            expect(mockCollection.findOne).toHaveBeenCalledWith({ title: 'My Product' });
+        });
+    });
 });

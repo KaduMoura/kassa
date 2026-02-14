@@ -10,7 +10,7 @@ export async function searchRoutes(server: FastifyInstance) {
     const repo = new CatalogRepository();
     const vision = new GeminiVisionSignalExtractor();
     const reranker = new GeminiCatalogReranker();
-    const service = new ImageSearchService(vision, repo, reranker);
+    const service = new ImageSearchService(vision, repo, reranker, server.log);
     const controller = new SearchController(service);
 
     server.post('/image', (req, res) => controller.searchByImage(req, res));
