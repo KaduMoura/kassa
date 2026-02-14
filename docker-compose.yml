@@ -1,0 +1,53 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - MONGO_URI=${MONGO_URI}
+      - CORS_ORIGIN=http://localhost:3000
+    profiles:
+      - demo
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    profiles:
+      - demo
+
+  # Dev mode services (optional profile)
+  api-dev:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "corepack enable && pnpm install && pnpm --filter api dev"
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=development
+    profiles:
+      - dev
+
+  web-dev:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "corepack enable && pnpm install && pnpm --filter web dev"
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    profiles:
+      - dev
