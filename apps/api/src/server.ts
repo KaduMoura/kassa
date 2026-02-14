@@ -15,6 +15,7 @@ import { appConfigService } from './config/app-config.service';
 import { telemetryService } from './services/telemetry.service';
 import { searchRoutes } from './interfaces/http/routes/search.routes';
 import { adminRoutes } from './interfaces/http/routes/admin.routes';
+import { feedbackRoutes } from './interfaces/http/routes/feedback.routes';
 
 const server = Fastify({
     logger: env.NODE_ENV === 'production' ? {
@@ -134,6 +135,7 @@ async function bootstrap() {
         });
 
         await server.register(searchRoutes, { prefix: '/api/search' });
+        await server.register(feedbackRoutes, { prefix: '/api/search' });
         await server.register(adminRoutes, { prefix: '/api/admin' });
 
         const port = env.PORT;

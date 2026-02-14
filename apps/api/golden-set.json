@@ -1,0 +1,29 @@
+[
+    {
+        "id": "sofa_velvet_01",
+        "label": "Grey velvet sofa, minimalist",
+        "imagePath": "eval/images/sofa_velvet_01.jpg",
+        "prompt": "minimalist, grey",
+        "expectedCategory": "Sala de Estar",
+        "expectedType": "Sofá",
+        "notes": "Testing style and color extraction."
+    },
+    {
+        "id": "chair_eames_01",
+        "label": "White eames chair, wood legs",
+        "imagePath": "eval/images/chair_eames_01.jpg",
+        "prompt": "under 200",
+        "expectedCategory": "Sala de Jantar",
+        "expectedType": "Cadeira",
+        "notes": "Testing price constraint satisfaction."
+    },
+    {
+        "id": "table_industrial_01",
+        "label": "Industrial dining table, metal and wood",
+        "imagePath": "eval/images/table_industrial_01.jpg",
+        "prompt": "big, around 160cm",
+        "expectedCategory": "Sala de Jantar",
+        "expectedType": "Mesa",
+        "notes": "Testing dimension proximity ranking."
+    }
+]

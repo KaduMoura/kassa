@@ -15,6 +15,10 @@ export interface TelemetryEvent {
         broadRetrieval: boolean;
     };
     error: string | null;
+    feedback?: {
+        items: Record<string, 'thumbs_up' | 'thumbs_down'>;
+        notes?: string;
+    };
 }
 
 /**
@@ -50,6 +54,20 @@ export class TelemetryService {
         if (this.events.length > this.MAX_EVENTS) {
             this.events.pop(); // Remove from end
         }
+    }
+
+    /**
+     * Adds user feedback to an existing telemetry event.
+     */
+    public addFeedback(requestId: string, feedback: NonNullable<TelemetryEvent['feedback']>): boolean {
+        const index = this.events.findIndex(e => e.requestId === requestId);
+        if (index === -1) return false;
+
+        this.events[index] = {
+            ...this.events[index],
+            feedback
+        };
+        return true;
     }
 
     /**
