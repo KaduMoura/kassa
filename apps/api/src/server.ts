@@ -17,7 +17,9 @@ import { searchRoutes } from './interfaces/http/routes/search.routes';
 import { adminRoutes } from './interfaces/http/routes/admin.routes';
 
 const server = Fastify({
-    logger: env.NODE_ENV === 'production' ? true : {
+    logger: env.NODE_ENV === 'production' ? {
+        redact: ['req.headers["x-ai-api-key"]', 'req.headers["x-admin-token"]', 'req.headers.authorization']
+    } : {
         transport: {
             target: 'pino-pretty',
             options: {
@@ -25,6 +27,7 @@ const server = Fastify({
                 ignore: 'pid,hostname',
             },
         },
+        redact: ['req.headers["x-ai-api-key"]', 'req.headers["x-admin-token"]', 'req.headers.authorization']
     },
 });
 
@@ -122,8 +125,12 @@ async function bootstrap() {
         });
 
         // Routes
-        server.get('/health', async () => {
-            return { status: 'OK', timestamp: new Date().toISOString() };
+        server.get('/health', async (request) => {
+            return {
+                data: { status: 'OK', timestamp: new Date().toISOString() },
+                error: null,
+                meta: { requestId: request.id, timings: null, notices: [] }
+            };
         });
 
         await server.register(searchRoutes, { prefix: '/api/search' });
