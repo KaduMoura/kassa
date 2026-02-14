@@ -49,13 +49,6 @@ export function ResultsList({ results, status, requestId }: ResultsListProps) {
                         </div>
                     </div>
                     <div className="text-center space-y-2">
-                        <motion.p
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-2xl font-bold tracking-tight text-[#202124]"
-                        >
-                            {status === 'uploading' ? 'Sending image...' : 'AI is analyzing visuals...'}
-                        </motion.p>
                         <p className="text-slate-400 font-light">Finding your perfect match in our catalog</p>
                     </div>
                 </motion.div>
