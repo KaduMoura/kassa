@@ -94,7 +94,7 @@ sequenceDiagram
 
     %% Stage 2 Reranking
     opt Reranking Enabled & Candidates > 0
-        Svc->>Rerank: rerank(signals, Top-M Candidates, apiKey)
+        Svc->>Rerank: rerank(signals, Top-M Candidates, apiKey, Weights)
         alt Rerank Success
             Rerank-->>Svc: { rankedIds: [...], reasons: {...} }
             Svc->>Svc: Reorder based on AI Rank

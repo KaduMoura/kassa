@@ -13,8 +13,8 @@ The matching system is built as a **two-stage pipeline**:
 2. **Stage 2 — Catalog-Aware Re-ranking (Gemini 3 Flash Preview)**  
    Ranks a bounded set of catalog candidates using signals + prompt context.
 
-A **deterministic heuristic ranker** exists as a fallback and baseline.  
-Admin parameters control the most important knobs (candidateTopN, weights, thresholds, rerankTopM, etc.).
+A **deterministic heuristic ranker** (using fuzzy token matching) exists as a fallback and baseline.  
+Admin parameters control the most important knobs (candidateTopN, weights, thresholds, rerankTopM, etc.), which are respected by both the heuristic scorer and the LLM reranker.
 
 ---
 
@@ -262,7 +262,7 @@ Before calling Gemini 3, compute a composite score per candidate. This provides:
 
 **Feature signals used**
 
-* Text similarity score (keywords vs title/description)
+* Text similarity score (fuzzy token matching between keywords and title/description)
 * Category/type match score
 * Style/material/color keyword matches
 * Price compatibility (if prompt expresses)
