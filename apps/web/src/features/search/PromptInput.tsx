@@ -17,37 +17,37 @@ export function PromptInput({
     className,
 }: PromptInputProps) {
     return (
-        <div className={cn("relative group", className)}>
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                <Search className="w-5 h-5" />
-            </div>
-
-            <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={placeholder}
-                className="w-full pl-12 pr-12 py-4 bg-secondary/40 border border-border/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-secondary/60 transition-all text-lg placeholder:text-muted-foreground/60"
-                maxLength={500}
-            />
-
-            {value && (
-                <button
-                    onClick={() => onChange("")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition-all animate-fade-in"
-                >
-                    <X className="w-4 h-4" />
-                </button>
-            )}
-
-            <div className="absolute -bottom-6 left-0 text-[10px] uppercase tracking-wider font-bold text-muted-foreground/40 px-2">
+        <div className={cn("space-y-4", className)}>
+            <div className="text-[10px] uppercase tracking-[0.1em] font-bold text-slate-400/80 px-1">
                 Optional Refinement
             </div>
-            {value.length > 400 && (
-                <div className="absolute -bottom-6 right-2 text-[10px] font-mono text-muted-foreground/60">
-                    {value.length}/500
-                </div>
-            )}
+
+            <div
+                className={cn(
+                    "flex items-center w-full px-5 py-4 bg-white border border-slate-100 rounded-2xl transition-all group-focus-within:ring-4 group-focus-within:ring-primary/10 group-focus-within:border-primary/20",
+                    "hover:border-slate-200 hover:shadow-sm"
+                )}
+            >
+                <Search className="w-5 h-5 stroke-[2] text-slate-400 group-focus-within:text-primary transition-colors shrink-0 mr-4" />
+
+                <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={placeholder}
+                    className="flex-1 bg-transparent border-none outline-none text-base text-slate-700 placeholder:text-slate-300 font-medium h-full w-full"
+                    maxLength={500}
+                />
+
+                {value && (
+                    <button
+                        onClick={() => onChange("")}
+                        className="p-1.5 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all animate-fade-in shrink-0 ml-2"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
         </div>
     );
 }

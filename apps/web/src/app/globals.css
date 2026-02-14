@@ -5,6 +5,7 @@
 @layer base {
   :root {
     --background: 210 40% 98%;
+    /* Subtle blueish tint for bg */
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -13,7 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 221.2 83.2% 53.3%;
+    /* KassaLabs Primary Blue */
+    --primary: 231 100% 70%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -30,11 +32,12 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 231 100% 70%;
 
-    --radius: 0.75rem;
+    --radius: 1.5rem;
   }
 
+  /* Dark mode support (though redesign is light-focused) */
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -45,7 +48,7 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 231 100% 70%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -62,7 +65,7 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 231 100% 70%;
   }
 }
 
@@ -71,22 +74,25 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[#F8FAFC] text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-/* Custom Utilities for Glassmorphism & Premium Feel */
 @layer utilities {
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 dark:bg-black/40 dark:border-white/10;
+    @apply bg-white/40 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
   }
   
   .glass-card {
-    @apply bg-white/80 backdrop-blur-lg border border-white/30 shadow-xl dark:bg-zinc-900/60 dark:border-white/10;
+    @apply bg-white/60 backdrop-blur-2xl border border-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[2.5rem];
   }
 
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-primary to-violet-600 dark:from-primary dark:to-violet-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#6366f1] to-[#a855f7];
+  }
+
+  .bg-orb {
+    @apply absolute rounded-full blur-[120px] pointer-events-none -z-10;
   }
 }
