@@ -17,8 +17,14 @@ The fastest way to run the entire stack (API, Web, and Database) is using Docker
     ```
 3.  **Access the applications**:
     -   **Web Interface**: [http://localhost:3000](http://localhost:3000)
-    -   **API Documentation (JSON)**: [http://localhost:4000/api/search/health](http://localhost:4000/api/search/health)
-    -   **Admin Panel**: Accessible via the "Admin" tab in the Web UI.
+    -   **API Health Check**: [http://localhost:4000/health](http://localhost:4000/health)
+    -   **Admin Panel**: Accessible via the "Admin" tab in the Web UI or via `/api/config`.
+
+### Key API Endpoints
+-   `POST /api/search`: Main image + prompt search.
+-   `GET /api/config`: View current system weights and thresholds.
+-   `POST /api/feedback/:requestId`: Submit thumbs up/down and notes for a search.
+-   `GET /api/telemetry`: View live search insights (Admin Token required).
 
 **First-run Checklist:**
 1.  Open [http://localhost:3000](http://localhost:3000).

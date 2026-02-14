@@ -8,7 +8,7 @@ dotenv.config();
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.preprocess((val) => Number(val), z.number()).default(4000),
-    MONGO_URI: z.string().url(),
+    MONGO_URI: z.string().url().default('mongodb://localhost:27017/test'),
     CORS_ORIGIN: z.string().default('*'),
     STAGE1_TIMEOUT_MS: z.preprocess((val) => Number(val), z.number()).default(6000),
     STAGE2_TIMEOUT_MS: z.preprocess((val) => Number(val), z.number()).default(7000),

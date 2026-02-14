@@ -145,8 +145,9 @@ async function bootstrap() {
         });
 
         await server.register(searchRoutes, { prefix: '/api/search' });
-        await server.register(feedbackRoutes, { prefix: '/api/search' });
+        await server.register(feedbackRoutes, { prefix: '/api/feedback' });
         await server.register(adminRoutes, { prefix: '/api/admin' });
+        await server.register(adminRoutes, { prefix: '/api' }); // Path aliases /api/config and /api/telemetry for documentation compliance
 
         const port = env.PORT;
         const host = '0.0.0.0';

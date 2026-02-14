@@ -19,7 +19,7 @@ describe('Feedback Routes', () => {
 
         const response = await fastify.inject({
             method: 'POST',
-            url: '/test-req-123/feedback',
+            url: '/test-req-123',
             payload: {
                 feedback: {
                     items: { 'prod-1': 'thumbs_up' },
@@ -44,7 +44,7 @@ describe('Feedback Routes', () => {
 
         const response = await fastify.inject({
             method: 'POST',
-            url: '/non-existent/feedback',
+            url: '/non-existent',
             payload: {
                 feedback: { items: {} }
             }
