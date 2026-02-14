@@ -19,7 +19,7 @@ const envSchema = z.object({
     AI_PROVIDER: z.string().default('gemini'),
     GEMINI_MODEL_VISION: z.string().default('gemini-2.5-flash'),
     GEMINI_MODEL_RERANK: z.string().default('gemini-3-flash-preview'),
-    AI_RETRY_MAX: z.preprocess((val) => Number(val), z.number()).default(1),
+    AI_RETRY_MAX: z.preprocess((val) => Number(val), z.number()).default(4),
     // Missing compliance knobs (docs/10)
     MIN_CANDIDATES: z.preprocess((val) => Number(val), z.number()).default(10),
     MAX_KEYWORDS: z.preprocess((val) => Number(val), z.number()).default(8),

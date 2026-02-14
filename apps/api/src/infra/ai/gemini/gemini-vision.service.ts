@@ -30,7 +30,7 @@ export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
         console.log(`[LLM Vision] SYSTEM MESSAGE: ${VISION_SYSTEM_PROMPT}`);
         console.log(`[LLM Vision] USER PROMPT: ${userPrompt}`);
 
-        const MAX_ATTEMPTS = 2;
+        const MAX_ATTEMPTS = env.AI_RETRY_MAX;
         let lastError: any;
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {

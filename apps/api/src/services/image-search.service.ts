@@ -37,29 +37,7 @@ export class ImageSearchService {
         }
     }
 
-    private async withRetry<T>(
-        operation: () => Promise<T>,
-        maxRetries: number,
-        stageName: string
-    ): Promise<T> {
-        let lastError: unknown;
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-                return await operation();
-            } catch (error) {
-                lastError = error;
-                const err = error as { code?: string; status?: number; message?: string };
-                const isTransient = err.code === AiErrorCode.PROVIDER_RATE_LIMIT || (err.status && err.status >= 500) || err.code === AiErrorCode.PROVIDER_NETWORK_ERROR;
 
-                if (attempt < maxRetries && isTransient) {
-                    this.logger?.warn(`[ImageSearchService] Retrying ${stageName} (attempt ${attempt + 1}/${maxRetries}) due to transient error: `, err.message);
-                    continue;
-                }
-                break;
-            }
-        }
-        throw lastError;
-    }
 
     /**
      * Complete Search Pipeline
@@ -86,23 +64,19 @@ export class ImageSearchService {
         const s1Start = Date.now();
         let signals: ImageSignals;
         try {
-            signals = await this.withRetry(
-                () => this.withTimeout(
-                    this.visionExtractor.extractSignals({
-                        imageBytes,
-                        mimeType,
-                        prompt: userPrompt,
-                        apiKey,
-                        requestId,
-                        config: {
-                            temperature: 0.1,
-                            maxOutputTokens: 1000
-                        }
-                    }),
-                    config.timeoutsMs.stage1,
-                    'Stage 1 (Vision)'
-                ),
-                config.retries.stage1,
+            signals = await this.withTimeout(
+                this.visionExtractor.extractSignals({
+                    imageBytes,
+                    mimeType,
+                    prompt: userPrompt,
+                    apiKey,
+                    requestId,
+                    config: {
+                        temperature: 0.1,
+                        maxOutputTokens: 1000
+                    }
+                }),
+                config.timeoutsMs.stage1,
                 'Stage 1 (Vision)'
             );
         } catch (error) {
@@ -218,24 +192,20 @@ export class ImageSearchService {
                 const topCandidates = scoredCandidates.slice(0, config.llmRerankTopM);
                 candidatesRerankedCount = topCandidates.length;
 
-                const rerankResult = await this.withRetry(
-                    () => this.withTimeout(
-                        this.reranker.rerank({
-                            signals,
-                            candidates: topCandidates,
-                            prompt: userPrompt,
-                            apiKey,
-                            requestId,
-                            weights: config.weights,
-                            config: {
-                                temperature: 0.1,
-                                maxOutputTokens: 2000
-                            }
-                        }),
-                        config.timeoutsMs.stage2,
-                        'Stage 2 (Rerank)'
-                    ),
-                    config.retries.stage2,
+                const rerankResult = await this.withTimeout(
+                    this.reranker.rerank({
+                        signals,
+                        candidates: topCandidates,
+                        prompt: userPrompt,
+                        apiKey,
+                        requestId,
+                        weights: config.weights,
+                        config: {
+                            temperature: 0.1,
+                            maxOutputTokens: 2000
+                        }
+                    }),
+                    config.timeoutsMs.stage2,
                     'Stage 2 (Rerank)'
                 );
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GeminiVisionSignalExtractor } from './gemini-vision.service';
 import { AiErrorCode } from '../../../domain/ai/schemas';
 
@@ -20,6 +20,11 @@ describe('GeminiVisionSignalExtractor', () => {
     beforeEach(() => {
         extractor = new GeminiVisionSignalExtractor();
         vi.clearAllMocks();
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     it('should successfully extract and validate signals', async () => {
@@ -70,12 +75,21 @@ describe('GeminiVisionSignalExtractor', () => {
             },
         });
 
-        await expect(extractor.extractSignals({
+        const extractPromise = extractor.extractSignals({
             imageBytes: Buffer.from('fake-image'),
             mimeType: 'image/jpeg',
             apiKey: 'fake-key',
             requestId: 'test-req',
-        })).rejects.toThrow(/Failed to parse AI response/);
+        });
+
+        // Advance timers for retries
+        for (let i = 0; i < 5; i++) {
+            await vi.runAllTimersAsync();
+        }
+
+        await expect(extractPromise).rejects.toThrow(/Failed to parse AI response/);
+
+        expect(mockGenerateContent).toHaveBeenCalledTimes(4); // env.AI_RETRY_MAX
     });
 
     it('should throw AI_AUTH_ERROR on 401 response', async () => {

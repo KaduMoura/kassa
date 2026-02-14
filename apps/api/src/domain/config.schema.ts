@@ -30,10 +30,6 @@ export const AdminConfigSchema = z.object({
         stage2: z.number().int().min(100).max(30000).default(7000),
         total: z.number().int().min(100).max(60000).default(15000),
     }).default({}),
-    retries: z.object({
-        stage1: z.number().int().min(0).max(1).default(1),
-        stage2: z.number().int().min(0).max(1).default(1),
-    }).default({}),
     fallbackStrategy: z.enum(['broad', 'prompt-first', 'vision-first', 'heuristic-only']).default('broad'),
 });
 

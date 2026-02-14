@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GeminiCatalogReranker } from './gemini-reranker.service';
 import { ImageSignals } from '../../../domain/ai/schemas';
 
@@ -23,6 +23,11 @@ describe('GeminiCatalogReranker', () => {
     beforeEach(() => {
         reranker = new GeminiCatalogReranker();
         vi.clearAllMocks();
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     const mockSignals: ImageSignals = {
@@ -97,26 +102,26 @@ describe('GeminiCatalogReranker', () => {
         const malformedJson = "Invalid JSON { [";
 
         // Primary fails
-        mockGenerateContent.mockResolvedValueOnce({
-            response: { text: () => malformedJson },
-        });
-        // Repair attempt 1 fails
-        mockGenerateContent.mockResolvedValueOnce({
-            response: { text: () => malformedJson },
-        });
-        // Repair attempt 2 fails
-        mockGenerateContent.mockResolvedValueOnce({
+        // All attempts (primary + repair + outer retries) fail
+        mockGenerateContent.mockResolvedValue({
             response: { text: () => malformedJson },
         });
 
-        await expect(reranker.rerank({
+        const rerankPromise = reranker.rerank({
             signals: mockSignals,
             candidates: mockCandidates,
             apiKey: 'fake-key',
             requestId: 'fail-req',
-        })).rejects.toThrow('Failed to repair JSON after 2 attempts');
+        });
 
-        expect(mockGenerateContent).toHaveBeenCalledTimes(3); // 1 primary + 2 repair retries
+        // Advance timers for all retry attempts (4 outer * 5 internal = 20 attempts)
+        for (let i = 0; i < 25; i++) {
+            await vi.runAllTimersAsync();
+        }
+
+        await expect(rerankPromise).rejects.toThrow(/Failed to repair JSON after 4 attempts/);
+
+        expect(mockGenerateContent).toHaveBeenCalledTimes(20); // 4 outer * (1 primary + 4 repairs)
     });
 
     it('should handle missing products by appending them to the end', async () => {

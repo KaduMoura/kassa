@@ -58,7 +58,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
         console.log(`[LLM Reranker] SYSTEM MESSAGE: ${RERANK_SYSTEM_PROMPT}`);
         console.log(`[LLM Reranker] USER PROMPT: ${userPrompt}`);
 
-        const MAX_ATTEMPTS = 3;
+        const MAX_ATTEMPTS = env.AI_RETRY_MAX;
         let lastError: any;
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -151,7 +151,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
         malformedJson: string,
         apiKey: string,
         requestId: string,
-        maxRetries = 2
+        maxRetries = env.AI_RETRY_MAX
     ): Promise<any> {
         const genAI = createGeminiClient(apiKey);
         const systemMessage = "You are a JSON repair expert. Fix the malformed JSON to match the required schema exactly.";
