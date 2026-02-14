@@ -37,6 +37,11 @@ async function bootstrap() {
     try {
         // Infrastructure
         await connectToDatabase();
+        server.log.info({
+            adminToken: env.ADMIN_TOKEN.substring(0, 3) + '***',
+            nodeEnv: env.NODE_ENV,
+            aiProvider: env.AI_PROVIDER
+        }, 'Backend infrastructure initialized');
 
         // Middleware
         await server.register(cors, {

@@ -3,6 +3,7 @@ import { VisionSignalExtractor, VisionSignalExtractorInput } from '../../../doma
 import { ImageSignals, ImageSignalsSchema, AiError, AiErrorCode } from '../../../domain/ai/schemas';
 import { VISION_SYSTEM_PROMPT, VISION_USER_PROMPT_PREFIX } from './prompts/vision-v1';
 import { createGeminiClient } from './client';
+import { env } from '../../../config/env';
 
 export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
     async extractSignals(input: VisionSignalExtractorInput): Promise<ImageSignals> {
@@ -11,7 +12,7 @@ export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
         try {
             const genAI = createGeminiClient(apiKey);
             const model = genAI.getGenerativeModel({
-                model: 'gemini-1.5-flash',
+                model: env.GEMINI_MODEL_VISION,
                 systemInstruction: VISION_SYSTEM_PROMPT
             });
 

@@ -3,6 +3,7 @@ import { CatalogReranker, CatalogRerankerInput } from '../../../domain/ai/interf
 import { RerankResult, RerankResultSchema, AiError, AiErrorCode } from '../../../domain/ai/schemas';
 import { RERANK_SYSTEM_PROMPT, buildRerankUserPrompt } from './prompts/rerank-v1';
 import { createGeminiClient } from './client';
+import { env } from '../../../config/env';
 
 export class GeminiCatalogReranker implements CatalogReranker {
     async rerank(input: CatalogRerankerInput): Promise<RerankResult> {
@@ -15,7 +16,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
         try {
             const genAI = createGeminiClient(apiKey);
             const model = genAI.getGenerativeModel({
-                model: 'gemini-1.5-flash',
+                model: env.GEMINI_MODEL_RERANK,
                 systemInstruction: RERANK_SYSTEM_PROMPT
             });
 

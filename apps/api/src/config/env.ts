@@ -15,6 +15,11 @@ const envSchema = z.object({
     TOTAL_TIMEOUT_MS: z.preprocess((val) => Number(val), z.number()).default(15000),
     MAX_UPLOAD_BYTES: z.preprocess((val) => Number(val), z.number()).default(10485760), // 10MB
     ADMIN_TOKEN: z.string().default('debug-secret'),
+    // AI Models & Provider (from docs/14)
+    AI_PROVIDER: z.string().default('gemini'),
+    GEMINI_MODEL_VISION: z.string().default('gemini-1.5-flash'),
+    GEMINI_MODEL_RERANK: z.string().default('gemini-1.5-flash'),
+    AI_RETRY_MAX: z.preprocess((val) => Number(val), z.number()).default(1),
 });
 
 const _env = envSchema.safeParse(process.env);
