@@ -1,5 +1,5 @@
 # Base stage
-FROM node:20-slim AS base
+FROM node:24.13-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -12,7 +12,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm --filter web build
 
 # Runtime stage
-FROM node:20-slim AS runtime
+FROM node:24.13-slim AS runtime
 WORKDIR /app
 
 COPY --from=build /app/apps/web/public ./public
