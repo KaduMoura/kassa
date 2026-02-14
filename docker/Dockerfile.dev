@@ -1,0 +1,19 @@
+FROM node:24.13-slim
+
+# Install basic dependencies if needed (e.g., for pnpm or native modules)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable Corepack and prepare pnpm
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
+
+WORKDIR /app
+
+# Ensure we have the correct pnpm version available globally
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+CMD ["sh"]
