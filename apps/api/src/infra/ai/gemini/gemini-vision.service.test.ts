@@ -59,7 +59,7 @@ describe('GeminiVisionSignalExtractor', () => {
             categoryGuess: expect.objectContaining({ value: 'Chair' }),
         }));
         expect(mockGetGenerativeModel).toHaveBeenCalledWith(expect.objectContaining({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
         }));
     });
 
