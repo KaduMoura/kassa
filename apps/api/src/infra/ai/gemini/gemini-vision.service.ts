@@ -24,6 +24,11 @@ export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
         const userPrompt = prompt
             ? `${VISION_USER_PROMPT_PREFIX}\nUser intent: ${prompt}`
             : VISION_USER_PROMPT_PREFIX;
+        const modelName = env.GEMINI_MODEL_VISION;
+
+        console.log(`[LLM Vision] MODEL: ${modelName}`);
+        console.log(`[LLM Vision] SYSTEM MESSAGE: ${VISION_SYSTEM_PROMPT}`);
+        console.log(`[LLM Vision] USER PROMPT: ${userPrompt}`);
 
         const MAX_ATTEMPTS = 2;
         let lastError: any;
@@ -47,6 +52,7 @@ export class GeminiVisionSignalExtractor implements VisionSignalExtractor {
                 });
 
                 const responseText = result.response.text();
+                console.log(`[LLM Vision] RESULT: ${responseText}`);
 
                 try {
                     const json = JSON.parse(responseText);

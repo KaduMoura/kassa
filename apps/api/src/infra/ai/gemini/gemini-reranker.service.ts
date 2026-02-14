@@ -52,6 +52,11 @@ export class GeminiCatalogReranker implements CatalogReranker {
         };
 
         const userPrompt = buildRerankUserPrompt(signals, candidates, prompt);
+        const modelName = env.GEMINI_MODEL_RERANK;
+
+        console.log(`[LLM Reranker] MODEL: ${modelName}`);
+        console.log(`[LLM Reranker] SYSTEM MESSAGE: ${RERANK_SYSTEM_PROMPT}`);
+        console.log(`[LLM Reranker] USER PROMPT: ${userPrompt}`);
 
         const MAX_ATTEMPTS = 3;
         let lastError: any;
@@ -68,6 +73,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
                 });
 
                 const responseText = result.response.text();
+                console.log(`[LLM Reranker] RESULT: ${responseText}`);
                 let rawData: any;
 
                 try {
@@ -148,9 +154,11 @@ export class GeminiCatalogReranker implements CatalogReranker {
         maxRetries = 2
     ): Promise<any> {
         const genAI = createGeminiClient(apiKey);
+        const systemMessage = "You are a JSON repair expert. Fix the malformed JSON to match the required schema exactly.";
+        const modelName = env.GEMINI_MODEL_VISION;
         const model = genAI.getGenerativeModel({
-            model: env.GEMINI_MODEL_VISION, // Use 2.5 Flash
-            systemInstruction: "You are a JSON repair expert. Fix the malformed JSON to match the required schema exactly."
+            model: modelName, // Use 2.5 Flash
+            systemInstruction: systemMessage
         });
 
         const generationConfig: GenerationConfig = {
@@ -162,15 +170,21 @@ export class GeminiCatalogReranker implements CatalogReranker {
         let lastError: any;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
+                const userPrompt = `Repair this malformed JSON: ${malformedJson}\nReturn ONLY the valid JSON.`;
+                console.log(`[LLM Repair] MODEL: ${modelName}`);
+                console.log(`[LLM Repair] SYSTEM MESSAGE: ${systemMessage}`);
+                console.log(`[LLM Repair] USER PROMPT: ${userPrompt}`);
+
                 const result = await model.generateContent({
                     contents: [{
                         role: 'user',
-                        parts: [{ text: `Repair this malformed JSON: ${malformedJson}\nReturn ONLY the valid JSON.` }],
+                        parts: [{ text: userPrompt }],
                     }],
                     generationConfig,
                 });
 
                 const fixedText = result.response.text();
+                console.log(`[LLM Repair] RESULT: ${fixedText}`);
                 return this.parseAndValidate(fixedText);
             } catch (error) {
                 lastError = error;
