@@ -1,26 +1,40 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { ImageSearchService } from '../../../services/image-search.service';
-import { SearchImageHeadersSchema } from '../schemas/search.schemas';
+import { SearchImageHeadersSchema, SearchImageBodySchema } from '../schemas/search.schemas';
 
 export class SearchController {
     constructor(private readonly imageSearchService: ImageSearchService) { }
 
     async searchByImage(request: FastifyRequest, reply: FastifyReply) {
+        const requestId = (request.id as string) || `req_${Date.now()}`;
+        const meta = { requestId, timings: null, notices: [] };
+
         // 1. Validate Headers
         const headerResult = SearchImageHeadersSchema.safeParse(request.headers);
         if (!headerResult.success) {
             return reply.code(400).send({
-                error: 'Validation failed',
-                details: headerResult.error.format()
+                data: null,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid headers',
+                    details: headerResult.error.format()
+                },
+                meta
             });
         }
 
         const apiKey = headerResult.data['x-ai-api-key'];
-        const requestId = (request.headers['x-request-id'] as string) || `req_${Date.now()}`;
 
         // 2. Parse Multipart
         if (!request.isMultipart()) {
-            return reply.code(400).send({ error: 'Expected multipart/form-data' });
+            return reply.code(400).send({
+                data: null,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Expected multipart/form-data'
+                },
+                meta
+            });
         }
 
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -33,22 +47,44 @@ export class SearchController {
             if (part.type === 'file' && part.fieldname === 'image') {
                 if (!allowedMimeTypes.includes(part.mimetype)) {
                     return reply.code(400).send({
-                        error: `Invalid file type: ${part.mimetype}. Allowed types: ${allowedMimeTypes.join(', ')}`
+                        data: null,
+                        error: {
+                            code: 'VALIDATION_ERROR',
+                            message: `Invalid file type: ${part.mimetype}. Allowed types: ${allowedMimeTypes.join(', ')}`
+                        },
+                        meta
                     });
                 }
                 imageBuffer = await part.toBuffer();
                 mimeType = part.mimetype;
             } else if (part.type === 'field' && part.fieldname === 'prompt') {
                 const promptValue = part.value as string;
-                if (promptValue.length > 1000) {
-                    return reply.code(400).send({ error: 'Prompt too long (max 1000 chars)' });
+                const bodyResult = SearchImageBodySchema.safeParse({ prompt: promptValue });
+
+                if (!bodyResult.success) {
+                    return reply.code(400).send({
+                        data: null,
+                        error: {
+                            code: 'VALIDATION_ERROR',
+                            message: 'Invalid prompt',
+                            details: bodyResult.error.format()
+                        },
+                        meta
+                    });
                 }
-                userPrompt = promptValue;
+                userPrompt = bodyResult.data.prompt;
             }
         }
 
         if (!imageBuffer) {
-            return reply.code(400).send({ error: 'Missing image file in multipart body' });
+            return reply.code(400).send({
+                data: null,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Missing image file in multipart body'
+                },
+                meta
+            });
         }
 
         // 3. Coordinate Service

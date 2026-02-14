@@ -36,11 +36,14 @@ describe('CatalogRepository', () => {
         });
 
         expect(results).toHaveLength(5);
-        expect(mockCollection.find).toHaveBeenCalledWith(expect.objectContaining({
-            category: 'furniture',
-            type: 'chair',
-            $or: expect.any(Array)
-        }));
+        expect(mockCollection.find).toHaveBeenCalledWith(
+            expect.objectContaining({
+                category: 'furniture',
+                type: 'chair',
+                $or: expect.any(Array)
+            }),
+            expect.objectContaining({ projection: expect.any(Object) })
+        );
     });
 
     it('should fallback to Plan B if Plan A returns too few results', async () => {
@@ -57,10 +60,13 @@ describe('CatalogRepository', () => {
 
         expect(results).toHaveLength(6);
         // Second call should be Plan B (category + keywords, no type)
-        expect(mockCollection.find).toHaveBeenNthCalledWith(2, {
-            category: 'furniture',
-            $or: expect.any(Array)
-        });
+        expect(mockCollection.find).toHaveBeenNthCalledWith(2,
+            expect.objectContaining({
+                category: 'furniture',
+                $or: expect.any(Array)
+            }),
+            expect.objectContaining({ projection: expect.any(Object) })
+        );
     });
 
     it('should execute Plan C if no category/type provided but keywords exist', async () => {
@@ -71,9 +77,12 @@ describe('CatalogRepository', () => {
         });
 
         expect(results).toHaveLength(1);
-        expect(mockCollection.find).toHaveBeenCalledWith({
-            $or: expect.any(Array)
-        });
+        expect(mockCollection.find).toHaveBeenCalledWith(
+            expect.objectContaining({
+                $or: expect.any(Array)
+            }),
+            expect.objectContaining({ projection: expect.any(Object) })
+        );
     });
 
     it('should execute Plan D as last resort if category/type exist but keywords found nothing', async () => {
@@ -91,12 +100,15 @@ describe('CatalogRepository', () => {
         });
 
         expect(results).toHaveLength(1);
-        expect(mockCollection.find).toHaveBeenLastCalledWith({
-            $or: [
-                { category: 'furniture' },
-                { type: 'chair' }
-            ]
-        });
+        expect(mockCollection.find).toHaveBeenLastCalledWith(
+            {
+                $or: [
+                    { category: 'furniture' },
+                    { type: 'chair' }
+                ]
+            },
+            expect.objectContaining({ projection: expect.any(Object) })
+        );
     });
 
     describe('findById', () => {

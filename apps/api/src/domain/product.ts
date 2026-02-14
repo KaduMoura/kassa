@@ -20,4 +20,5 @@ export interface SearchCriteria {
     type?: string;
     keywords?: string[];
     limit?: number;
+    minCandidates?: number;
 }

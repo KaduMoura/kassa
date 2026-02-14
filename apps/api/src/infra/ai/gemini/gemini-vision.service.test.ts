@@ -38,6 +38,7 @@ describe('GeminiVisionSignalExtractor', () => {
                 multipleObjects: false,
                 lowImageQuality: false,
                 occludedOrPartial: false,
+                lowConfidence: false,
             },
         };
 

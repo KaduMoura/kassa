@@ -9,6 +9,9 @@ import { ImageSearchService } from './services/image-search.service';
 import { GeminiVisionSignalExtractor } from './infra/ai/gemini/gemini-vision.service';
 import { GeminiCatalogReranker } from './infra/ai/gemini/gemini-reranker.service';
 import { AiError, AiErrorCode } from './domain/ai/schemas';
+import { HeuristicScorer } from './domain/ranking/heuristic-scorer';
+import { appConfigService } from './config/app-config.service';
+import { telemetryService } from './services/telemetry.service';
 import { searchRoutes } from './interfaces/http/routes/search.routes';
 import { adminRoutes } from './interfaces/http/routes/admin.routes';
 
@@ -45,6 +48,9 @@ async function bootstrap() {
             // Log full error details
             request.log.error(error);
 
+            const requestId = request.id;
+            const meta = { requestId, timings: null, notices: [] };
+
             if (error instanceof AiError) {
                 const statusMap: Record<AiErrorCode, number> = {
                     [AiErrorCode.AI_AUTH_ERROR]: 401,
@@ -58,27 +64,41 @@ async function bootstrap() {
 
                 const status = statusMap[error.code] || 500;
                 return reply.code(status).send({
-                    error: error.message,
-                    code: error.code,
-                    requestId: request.id
+                    data: null,
+                    error: {
+                        code: error.code,
+                        message: error.message,
+                        details: (error as any).originalError || null
+                    },
+                    meta
                 });
             }
 
             // Handle validation errors (Fastify standard)
             if (error.validation) {
                 return reply.code(400).send({
-                    error: 'Validation failed',
-                    details: error.validation,
-                    requestId: request.id
+                    data: null,
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: 'Validation failed',
+                        details: error.validation
+                    },
+                    meta
                 });
             }
 
             // Default sanitized handler for internal errors
+            const status = error.statusCode || 500;
             const isProd = env.NODE_ENV === 'production';
-            reply.code(error.statusCode || 500).send({
-                error: isProd ? 'Internal Server Error' : error.message,
-                requestId: request.id,
-                ...(isProd ? {} : { stack: error.stack })
+
+            return reply.code(status).send({
+                data: null,
+                error: {
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: isProd ? 'Internal Server Error' : error.message,
+                    details: isProd ? null : { stack: error.stack }
+                },
+                meta
             });
         });
 
@@ -110,11 +130,20 @@ async function bootstrap() {
             const repo = new CatalogRepository();
             const vision = new GeminiVisionSignalExtractor();
             const reranker = new GeminiCatalogReranker();
-            const service = new ImageSearchService(vision, repo, reranker, server.log);
+            const heuristicScorer = new HeuristicScorer();
+            const service = new ImageSearchService(
+                vision,
+                repo,
+                reranker,
+                heuristicScorer,
+                appConfigService,
+                telemetryService,
+                server.log
+            );
 
             return {
                 message: 'ImageSearchService initialized successfully.',
-                usage: 'This endpoint verifies that the Two-Stage AI Pipeline is correctly wired (Stage 1: Vision, Stage 2: Rerank).',
+                usage: 'This endpoint verifies that the Two-Stage AI Pipeline is correctly wired.',
                 ready: true
             };
         });

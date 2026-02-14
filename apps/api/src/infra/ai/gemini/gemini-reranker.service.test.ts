@@ -26,7 +26,7 @@ describe('GeminiCatalogReranker', () => {
         typeGuess: { value: 'Dining Chair', confidence: 0.8 },
         attributes: { style: [], material: [], color: [], shape: [] },
         keywords: ['modern chair'],
-        qualityFlags: { isFurnitureLikely: true, multipleObjects: false, lowImageQuality: false, occludedOrPartial: false }
+        qualityFlags: { isFurnitureLikely: true, multipleObjects: false, lowImageQuality: false, occludedOrPartial: false, lowConfidence: false }
     };
 
     const mockCandidates = [

@@ -21,7 +21,15 @@ export const ImageSignalsSchema = z.object({
         multipleObjects: z.boolean().default(false),
         lowImageQuality: z.boolean().default(false),
         occludedOrPartial: z.boolean().default(false),
+        lowConfidence: z.boolean().default(false),
     }),
+    intent: z.object({
+        priceMax: z.number().optional(),
+        priceMin: z.number().optional(),
+        preferredWidth: z.number().optional(),
+        preferredHeight: z.number().optional(),
+        preferredDepth: z.number().optional(),
+    }).optional(),
 });
 
 export type ImageSignals = z.infer<typeof ImageSignalsSchema>;
@@ -32,6 +40,9 @@ export const CandidateSummarySchema = z.object({
     category: z.string(),
     type: z.string(),
     price: z.number(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    depth: z.number().optional(),
     description: z.string().max(300),
 });
 

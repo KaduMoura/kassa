@@ -39,7 +39,7 @@ describe('Search Routes Integration', () => {
         });
 
         expect(response.statusCode).toBe(400);
-        expect(JSON.parse(response.body).error).toContain('Validation failed');
+        expect(JSON.parse(response.body).error.message).toContain('Invalid headers');
     });
 
     it('should return 400 if not multipart', async () => {
@@ -52,7 +52,7 @@ describe('Search Routes Integration', () => {
         });
 
         expect(response.statusCode).toBe(400);
-        expect(JSON.parse(response.body).error).toContain('Expected multipart');
+        expect(JSON.parse(response.body).error.message).toContain('Expected multipart');
     });
 
     it('should return 400 for invalid mimetype', async () => {
@@ -77,7 +77,7 @@ describe('Search Routes Integration', () => {
         });
 
         expect(response.statusCode).toBe(400);
-        expect(JSON.parse(response.body).error).toContain('Invalid file type');
+        expect(JSON.parse(response.body).error.message).toContain('Invalid file type');
     });
 
     it('should return 400 for too long prompt', async () => {
@@ -102,7 +102,7 @@ describe('Search Routes Integration', () => {
         });
 
         expect(response.statusCode).toBe(400);
-        expect(JSON.parse(response.body).error).toContain('Prompt too long');
+        expect(JSON.parse(response.body).error.message).toContain('Invalid prompt');
     });
 
     it('should return 200 on successful pipeline', async () => {

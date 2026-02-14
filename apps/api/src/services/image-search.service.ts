@@ -1,7 +1,6 @@
 import { VisionSignalExtractor, CatalogReranker } from '../domain/ai/interfaces';
 import { ImageSignals, CandidateSummary, SearchResponse, ScoredCandidate, SearchTimings, SearchNotice } from '../domain/ai/schemas';
 import { CatalogRepository } from '../infra/repositories/catalog.repository';
-import { Product } from '../domain/product';
 import { HeuristicScorer } from '../domain/ranking/heuristic-scorer';
 import { AppConfigService } from '../config/app-config.service';
 import { TelemetryService } from './telemetry.service';
@@ -51,16 +50,33 @@ export class ImageSearchService {
             prompt: userPrompt,
             apiKey,
             requestId,
+            config: {
+                temperature: 0.1,
+                maxOutputTokens: 1000
+            }
         });
         timings.stage1Ms = Date.now() - s1Start;
 
-        // 2. Initial Retrieval (Heuristic)
+        // Add notices for low confidence
+        if (signals.categoryGuess.confidence < config.minCategoryConfidence) {
+            notices.push({ code: 'LOW_CONFIDENCE_CATEGORY', message: 'Low confidence in category identification.' });
+        }
+        if (signals.typeGuess.confidence < config.minTypeConfidence) {
+            notices.push({ code: 'LOW_CONFIDENCE_TYPE', message: 'Low confidence in specific type identification.' });
+        }
+
+        // 2. Initial Retrieval (Heuristic Plans)
         const mongoStart = Date.now();
+
+        // Confidence-driven retrieval: use Plan D if confidence is too low
+        const useStrictFilters = signals.categoryGuess.confidence >= config.minCategoryConfidence;
+
         const initialCandidates = await this.catalogRepository.findCandidates({
-            category: signals.categoryGuess.value,
-            type: signals.typeGuess.value,
+            category: useStrictFilters ? signals.categoryGuess.value : undefined,
+            type: useStrictFilters && signals.typeGuess.confidence >= config.minTypeConfidence ? signals.typeGuess.value : undefined,
             keywords: signals.keywords,
-            limit: config.candidateTopN
+            limit: config.candidateTopN,
+            minCandidates: config.minCandidates
         });
         timings.mongoMs = Date.now() - mongoStart;
 
@@ -75,8 +91,7 @@ export class ImageSearchService {
             this.logger?.info('[Search Summary] No candidates found', {
                 requestId,
                 timings,
-                counts: { retrieved: 0, reranked: 0, returned: 0 },
-                flags: { fallbackVision: false, fallbackRerank: false }
+                counts: { retrieved: 0, reranked: 0, returned: 0 }
             });
 
             this.telemetryService.record({
@@ -97,7 +112,10 @@ export class ImageSearchService {
             category: c.category,
             type: c.type,
             price: c.price,
-            description: c.description,
+            width: c.width,
+            height: c.height,
+            depth: c.depth,
+            description: c.description.substring(0, config.maxDescriptionChars),
         }));
 
         let scoredCandidates: ScoredCandidate[] = candidateSummaries.map(c =>
@@ -110,7 +128,7 @@ export class ImageSearchService {
         let candidatesRerankedCount = 0;
 
         // 4. Reranking (Stage 2)
-        if (config.enableLLMRerank) {
+        if (config.enableLLMRerank && scoredCandidates.length > 0) {
             const s2Start = Date.now();
             try {
                 // Only send top M candidates to LLM
@@ -123,6 +141,10 @@ export class ImageSearchService {
                     prompt: userPrompt,
                     apiKey,
                     requestId,
+                    config: {
+                        temperature: 0.1,
+                        maxOutputTokens: 2000
+                    }
                 });
 
                 // Map and reorder
@@ -142,7 +164,7 @@ export class ImageSearchService {
                 notices.push({ code: 'RERANK_FAILED', message: 'Falling back to heuristic ranking.' });
                 timings.stage2Ms = Date.now() - s2Start;
             }
-        } else {
+        } else if (!config.enableLLMRerank) {
             notices.push({ code: 'RERANK_DISABLED', message: 'Stage 2 reranking is disabled.' });
         }
 
@@ -160,7 +182,8 @@ export class ImageSearchService {
             },
             flags: {
                 rerankEnabled: config.enableLLMRerank,
-                hasPrompt: !!userPrompt
+                hasPrompt: !!userPrompt,
+                fallbackVision: signals.qualityFlags.lowConfidence || false
             }
         });
 
@@ -184,9 +207,9 @@ export class ImageSearchService {
                 returned: results.length
             },
             fallbacks: {
-                visionFallback: notices.some(n => n.code === 'FALLBACK_VISION'),
+                visionFallback: signals.qualityFlags.lowConfidence || false,
                 rerankFallback: notices.some(n => n.code === 'RERANK_FAILED'),
-                broadRetrieval: notices.some(n => n.code === 'FALLBACK_BROAD_RETRIEVAL')
+                broadRetrieval: !useStrictFilters
             },
             error: null
         });

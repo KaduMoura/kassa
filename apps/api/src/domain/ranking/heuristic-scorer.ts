@@ -31,6 +31,20 @@ export class HeuristicScorer {
         totalScore += attributeScore * config.weights.attributes;
         if (attributeScore > 0.5) reasons.push('Visual attributes match');
 
+        // 5. Price Proximity (if requested in intent)
+        if (signals.intent?.priceMax || signals.intent?.priceMin) {
+            const priceScore = this.calculatePriceMatch(candidate.price, signals.intent.priceMax, signals.intent.priceMin);
+            totalScore += priceScore * config.weights.price;
+            if (priceScore > 0.8) reasons.push('Price matches preference');
+        }
+
+        // 6. Dimensions Proximity (if requested in intent)
+        if (signals.intent?.preferredWidth || signals.intent?.preferredHeight || signals.intent?.preferredDepth) {
+            const dimScore = this.calculateDimensionMatch(candidate, signals.intent);
+            totalScore += dimScore * config.weights.dimensions;
+            if (dimScore > 0.8) reasons.push('Dimensions match preference');
+        }
+
         // Determine Match Band
         let matchBand = MatchBand.LOW;
         if (totalScore >= config.matchBands.high) {
@@ -80,5 +94,37 @@ export class HeuristicScorer {
         }
 
         return matches / attributes.length;
+    }
+
+    private calculatePriceMatch(price: number, max?: number, min?: number): number {
+        if (max && price > max) {
+            const overshoot = (price - max) / max;
+            return Math.max(0, 1 - overshoot); // Penalty 
+        }
+        if (min && price < min) {
+            const undershoot = (min - price) / min;
+            return Math.max(0, 1 - undershoot);
+        }
+        return 1.0; // Within range
+    }
+
+    private calculateDimensionMatch(candidate: CandidateSummary, intent: any): number {
+        let scores: number[] = [];
+
+        if (intent.preferredWidth && candidate.width) {
+            const diff = Math.abs(candidate.width - intent.preferredWidth) / intent.preferredWidth;
+            scores.push(Math.max(0, 1 - diff * 2)); // Strictness multiplier
+        }
+        if (intent.preferredHeight && candidate.height) {
+            const diff = Math.abs(candidate.height - intent.preferredHeight) / intent.preferredHeight;
+            scores.push(Math.max(0, 1 - diff * 2));
+        }
+        if (intent.preferredDepth && candidate.depth) {
+            const diff = Math.abs(candidate.depth - intent.preferredDepth) / intent.preferredDepth;
+            scores.push(Math.max(0, 1 - diff * 2));
+        }
+
+        if (scores.length === 0) return 0.5; // neutral
+        return scores.reduce((a, b) => a + b, 0) / scores.length;
     }
 }

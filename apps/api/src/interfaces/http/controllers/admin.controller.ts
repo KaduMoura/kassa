@@ -10,8 +10,8 @@ export class AdminController {
         const config = appConfigService.getConfig();
         return {
             data: config,
-            meta: { requestId: request.id },
-            error: null
+            error: null,
+            meta: { requestId: request.id }
         };
     }
 
@@ -27,16 +27,15 @@ export class AdminController {
 
             return {
                 data: updatedConfig,
-                message: 'Configuration updated successfully (volatile)',
-                meta: { requestId: request.id },
-                error: null
+                error: null,
+                meta: {
+                    requestId: request.id,
+                    notices: [{ code: 'CONFIG_UPDATED', message: 'Configuration updated successfully (volatile)' }]
+                }
             };
         } catch (error: any) {
-            return reply.code(400).send({
-                error: 'Invalid configuration',
-                details: error.errors || error.message,
-                meta: { requestId: request.id }
-            });
+            // Re-throw to be handled by the global error handler which is now standardized
+            throw error;
         }
     }
 
@@ -47,9 +46,11 @@ export class AdminController {
         const config = appConfigService.resetToDefaults();
         return {
             data: config,
-            message: 'Configuration reset to defaults',
-            meta: { requestId: request.id },
-            error: null
+            error: null,
+            meta: {
+                requestId: request.id,
+                notices: [{ code: 'CONFIG_RESET', message: 'Configuration reset to defaults' }]
+            }
         };
     }
 
@@ -60,11 +61,11 @@ export class AdminController {
         const events = telemetryService.getEvents();
         return {
             data: events,
+            error: null,
             meta: {
                 requestId: request.id,
                 count: events.length
-            },
-            error: null
+            }
         };
     }
 }

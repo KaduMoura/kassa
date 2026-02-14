@@ -25,7 +25,15 @@ Return ONLY a valid JSON object matching the following schema:
     "isFurnitureLikely": boolean,
     "multipleObjects": boolean,
     "lowImageQuality": boolean,
-    "occludedOrPartial": boolean
+    "occludedOrPartial": boolean,
+    "lowConfidence": boolean
+  },
+  "intent": {
+    "priceMax": number (optional),
+    "priceMin": number (optional),
+    "preferredWidth": number (optional),
+    "preferredHeight": number (optional),
+    "preferredDepth": number (optional)
   }
 }
 

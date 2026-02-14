@@ -24,7 +24,7 @@ describe('ImageSearchService', () => {
         typeGuess: { value: 'sofa', confidence: 0.8 },
         attributes: { style: ['modern'], material: ['fabric'], color: ['grey'], shape: ['L-shape'] },
         keywords: ['grey sofa', 'modern couch'],
-        qualityFlags: { isFurnitureLikely: true, multipleObjects: false, lowImageQuality: false, occludedOrPartial: false }
+        qualityFlags: { isFurnitureLikely: true, multipleObjects: false, lowImageQuality: false, occludedOrPartial: false, lowConfidence: false }
     };
 
     const mockProducts: Product[] = [

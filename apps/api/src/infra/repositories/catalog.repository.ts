@@ -13,8 +13,8 @@ export class CatalogRepository {
      * Main candidate retrieval logic with relaxation ladder.
      */
     async findCandidates(criteria: SearchCriteria): Promise<Product[]> {
-        const limit = criteria.limit || 50;
-        const minCandidates = 5;
+        const limit = criteria.limit || 60;
+        const minCandidates = criteria.minCandidates || 10;
 
         // Keep track of best results so far
         let lastResults: Product[] = [];
@@ -25,7 +25,7 @@ export class CatalogRepository {
             if (lastResults.length >= minCandidates) return lastResults;
         }
 
-        // Plan B: Category + Keywords
+        // Plan B: Category + Keywords (Balanced)
         if (criteria.category && criteria.keywords?.length) {
             const results = await this.executePlanB(criteria, limit);
             if (results.length >= minCandidates) return results;
@@ -39,7 +39,7 @@ export class CatalogRepository {
             if (results.length > lastResults.length) lastResults = results;
         }
 
-        // Plan D: Category + Type matching (if all keyword searches failed)
+        // Plan D: Category + Type matching (Fallback)
         if (criteria.category || criteria.type) {
             const results = await this.executePlanD(criteria, limit);
             if (results.length >= minCandidates) return results;
@@ -47,6 +47,20 @@ export class CatalogRepository {
         }
 
         return lastResults;
+    }
+
+    private getProjection() {
+        return {
+            _id: 1,
+            title: 1,
+            description: 1,
+            category: 1,
+            type: 1,
+            price: 1,
+            width: 1,
+            height: 1,
+            depth: 1
+        };
     }
 
     private async executePlanA(criteria: SearchCriteria, limit: number): Promise<Product[]> {
@@ -61,7 +75,7 @@ export class CatalogRepository {
             })) || []
         };
 
-        return this.collection.find(query).limit(limit).toArray();
+        return this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
     }
 
     private async executePlanB(criteria: SearchCriteria, limit: number): Promise<Product[]> {
@@ -75,7 +89,7 @@ export class CatalogRepository {
             })) || []
         };
 
-        return this.collection.find(query).limit(limit).toArray();
+        return this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
     }
 
     private async executePlanC(criteria: SearchCriteria, limit: number): Promise<Product[]> {
@@ -90,7 +104,7 @@ export class CatalogRepository {
             }))
         };
 
-        return this.collection.find(query).limit(limit).toArray();
+        return this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
     }
 
     private async executePlanD(criteria: SearchCriteria, limit: number): Promise<Product[]> {
@@ -102,7 +116,7 @@ export class CatalogRepository {
 
         const query: Filter<Product> = { $or: filters };
 
-        return this.collection.find(query).limit(limit).toArray();
+        return this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
     }
 
     async findById(id: string): Promise<Product | null> {

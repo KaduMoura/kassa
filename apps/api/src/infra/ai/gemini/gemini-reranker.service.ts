@@ -6,7 +6,7 @@ import { createGeminiClient } from './client';
 
 export class GeminiCatalogReranker implements CatalogReranker {
     async rerank(input: CatalogRerankerInput): Promise<RerankResult> {
-        const { signals, candidates, prompt, apiKey, config } = input;
+        const { signals, candidates, prompt, apiKey, config, requestId } = input;
 
         if (candidates.length === 0) {
             return { rankedIds: [], reasons: {} };
@@ -35,45 +35,42 @@ export class GeminiCatalogReranker implements CatalogReranker {
                 generationConfig,
             });
 
-            const responseText = result.response.text();
+            let responseText = result.response.text();
+            let validated;
 
             try {
-                const json = JSON.parse(responseText);
-                const validated = RerankResultSchema.safeParse(json);
-
-                if (!validated.success) {
-                    throw new AiError(
-                        AiErrorCode.AI_INVALID_OUTPUT,
-                        'Failed to validate Rerank output schema',
-                        validated.error.format()
-                    );
-                }
-
-                // Ensure all returned IDs exist in candidates
-                const candidateIds = new Set(candidates.map(c => c.id));
-                const filteredIds = validated.data.rankedIds.filter(id => candidateIds.has(id));
-
-                // Append any missing IDs from candidates to the end
-                const rankedSet = new Set(filteredIds);
-                candidates.forEach(c => {
-                    if (!rankedSet.has(c.id)) {
-                        filteredIds.push(c.id);
-                    }
+                validated = this.parseAndValidate(responseText);
+            } catch (firstError) {
+                // Stage 2.1: Repair Attempt
+                console.warn(`[Reranker] Initial JSON invalid for request ${requestId}, attempting repair...`);
+                const repairResult = await model.generateContent({
+                    contents: [
+                        { role: 'user', parts: [{ text: userPrompt }] },
+                        { role: 'model', parts: [{ text: responseText }] },
+                        { role: 'user', parts: [{ text: "Your previous response was not valid JSON. Please re-output only the JSON object." }] }
+                    ],
+                    generationConfig,
                 });
-
-                return {
-                    rankedIds: filteredIds,
-                    reasons: validated.data.reasons || {},
-                };
-            } catch (parseError: any) {
-                if (parseError instanceof AiError) throw parseError;
-
-                throw new AiError(
-                    AiErrorCode.AI_INVALID_OUTPUT,
-                    'Failed to parse Rerank response as JSON',
-                    responseText
-                );
+                responseText = repairResult.response.text();
+                validated = this.parseAndValidate(responseText);
             }
+
+            // Ensure all returned IDs exist in candidates
+            const candidateIds = new Set(candidates.map(c => c.id));
+            const filteredIds = validated.rankedIds.filter((id: string) => candidateIds.has(id));
+
+            // Append any missing IDs from candidates to the end
+            const rankedSet = new Set(filteredIds);
+            candidates.forEach(c => {
+                if (!rankedSet.has(c.id)) {
+                    filteredIds.push(c.id);
+                }
+            });
+
+            return {
+                rankedIds: filteredIds,
+                reasons: validated.reasons || {},
+            };
         } catch (error: any) {
             if (error instanceof AiError) throw error;
 
@@ -88,6 +85,32 @@ export class GeminiCatalogReranker implements CatalogReranker {
             }
 
             throw new AiError(AiErrorCode.AI_INTERNAL_ERROR, message, error);
+        }
+    }
+
+    private parseAndValidate(text: string): RerankResult {
+        try {
+            // Basic sanitization: sometimes model wraps in ```json ... ```
+            const cleaned = text.replace(/```json\n?/, '').replace(/\n?```/, '').trim();
+            const json = JSON.parse(cleaned);
+            const validated = RerankResultSchema.safeParse(json);
+
+            if (!validated.success) {
+                throw new AiError(
+                    AiErrorCode.AI_INVALID_OUTPUT,
+                    'Failed to validate Rerank output schema',
+                    validated.error.format()
+                );
+            }
+
+            return validated.data;
+        } catch (e: any) {
+            if (e instanceof AiError) throw e;
+            throw new AiError(
+                AiErrorCode.AI_INVALID_OUTPUT,
+                'Failed to parse Rerank response as JSON',
+                text
+            );
         }
     }
 }
