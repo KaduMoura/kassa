@@ -33,105 +33,107 @@ async function evaluate() {
     }
 
     const goldenSet: GoldenCase[] = JSON.parse(fs.readFileSync(goldenSetPath, 'utf8'));
-
-    // API URL usually points to local dev or production-like docker
     const API_URL = process.env.API_URL || 'http://localhost:4000/api/search';
     const API_KEY = process.env.GEMINI_API_KEY;
 
     if (!API_KEY) {
         console.error('❌ Error: GEMINI_API_KEY environment variable is required.');
-        console.log('Fix: export GEMINI_API_KEY=your_key_here');
         process.exit(1);
     }
 
-    const evalResults: EvalResult[] = [];
+    const baselineResults: EvalResult[] = [];
+    const augmentedResults: EvalResult[] = [];
 
+    console.log('\n--- Phase 1: Baseline (Image Only) ---');
     for (const testCase of goldenSet) {
-        process.stdout.write(`🔍 Testing: ${testCase.label.padEnd(40)} `);
-
-        const imageAbsPath = path.join(__dirname, '../', testCase.imagePath);
-
-        if (!fs.existsSync(imageAbsPath)) {
-            console.log('⚠️  [SKIP: Image missing]');
-            continue;
-        }
-
-        const imageBuffer = fs.readFileSync(imageAbsPath);
-
-        // Prepare multipart form data (Node 20+ supports FormData and fetch)
-        const formData = new FormData();
-        const blob = new Blob([imageBuffer], { type: 'image/jpeg' });
-        formData.append('image', blob, path.basename(testCase.imagePath));
-        if (testCase.prompt) formData.append('prompt', testCase.prompt);
-
-        try {
-            const start = Date.now();
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'x-ai-api-key': API_KEY
-                },
-                body: formData
-            });
-
-            const duration = Date.now() - start;
-
-            if (!response.ok) {
-                const errText = await response.text();
-                console.log(`❌ [API Error: ${response.status}]`);
-                continue;
-            }
-
-            const jsonResponse = await response.json() as any;
-            const candidates = jsonResponse.data?.results || [];
-
-            // Find rank of expected item by ID or Title
-            // In a real evaluation, we check if the correct item is in the top results.
-            const rank = candidates.findIndex((c: any) =>
-                c.id === testCase.id ||
-                c.title.toLowerCase().includes(testCase.id.toLowerCase().replace(/_/g, ' '))
-            ) + 1;
-
-            evalResults.push({
-                testCase,
-                rank: rank > 0 ? rank : null,
-                hitAt1: rank === 1,
-                hitAt3: rank > 0 && rank <= 3,
-                hitAt5: rank > 0 && rank <= 5,
-                mrr: rank > 0 ? 1 / rank : 0
-            });
-
-            if (rank > 0) {
-                console.log(`✅ Rank ${rank} (${duration}ms)`);
-            } else {
-                console.log('🔴 Not found');
-            }
-        } catch (error: any) {
-            console.log(`❌ [Fetch Error: ${error.message}]`);
-        }
+        const result = await runTest(testCase, API_URL, API_KEY, true); // No prompt
+        if (result) baselineResults.push(result);
     }
 
-    if (evalResults.length === 0) {
-        console.log('\n❌ No successful tests recorded. Check your connection or image paths.');
-        return;
+    console.log('\n--- Phase 2: Augmented (with Prompt) ---');
+    for (const testCase of goldenSet) {
+        const result = await runTest(testCase, API_URL, API_KEY, false); // With prompt
+        if (result) augmentedResults.push(result);
     }
 
-    // Compute aggregate metrics
-    const total = evalResults.length;
-    const hitAt1Count = evalResults.filter(r => r.hitAt1).length;
-    const hitAt3Count = evalResults.filter(r => r.hitAt3).length;
-    const hitAt5Count = evalResults.filter(r => r.hitAt5).length;
-    const avgMrr = evalResults.reduce((sum, r) => sum + r.mrr, 0) / total;
+    printReport(baselineResults, augmentedResults);
+}
 
-    console.log('\n' + '='.repeat(40));
-    console.log('       EVALUATION REPORT');
-    console.log('='.repeat(40));
-    console.log(`Total Scenarios:  ${total}`);
-    console.log(`Hit@1 Precision:  ${(hitAt1Count / total * 100).toFixed(1)}%`);
-    console.log(`Hit@3 Coverage:   ${(hitAt3Count / total * 100).toFixed(1)}%`);
-    console.log(`Hit@5 Coverage:   ${(hitAt5Count / total * 100).toFixed(1)}%`);
-    console.log(`Mean MRR:         ${avgMrr.toFixed(4)}`);
-    console.log('='.repeat(40));
+async function runTest(testCase: GoldenCase, apiUrl: string, apiKey: string, stripPrompt: boolean): Promise<EvalResult | null> {
+    const label = stripPrompt ? `[BL] ${testCase.label}` : `[AU] ${testCase.label}`;
+    process.stdout.write(`🔍 Testing: ${label.padEnd(50)} `);
+
+    const imageAbsPath = path.join(__dirname, '../', testCase.imagePath);
+    if (!fs.existsSync(imageAbsPath)) {
+        console.log('⚠️  [SKIP: Image missing]');
+        return null;
+    }
+
+    const formData = new FormData();
+    const blob = new Blob([fs.readFileSync(imageAbsPath)], { type: 'image/jpeg' });
+    formData.append('image', blob, path.basename(testCase.imagePath));
+    if (testCase.prompt && !stripPrompt) formData.append('prompt', testCase.prompt);
+
+    try {
+        const start = Date.now();
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'x-ai-api-key': apiKey },
+            body: formData
+        });
+
+        if (!response.ok) {
+            console.log(`❌ [API Error: ${response.status}]`);
+            return null;
+        }
+
+        const jsonResponse = await response.json() as any;
+        const candidates = jsonResponse.data?.results || [];
+
+        const rank = candidates.findIndex((c: any) =>
+            c.id === testCase.id ||
+            c.title.toLowerCase().includes(testCase.id.toLowerCase().replace(/_/g, ' '))
+        ) + 1;
+
+        console.log(rank > 0 ? `✅ Rank ${rank} (${Date.now() - start}ms)` : '🔴 Not found');
+
+        return {
+            testCase,
+            rank: rank > 0 ? rank : null,
+            hitAt1: rank === 1,
+            hitAt3: rank > 0 && rank <= 3,
+            hitAt5: rank > 0 && rank <= 5,
+            mrr: rank > 0 ? 1 / rank : 0
+        };
+    } catch (error: any) {
+        console.log(`❌ [Fetch Error: ${error.message}]`);
+        return null;
+    }
+}
+
+function printReport(baseline: EvalResult[], augmented: EvalResult[]) {
+    const calcMetrics = (results: EvalResult[]) => {
+        const total = results.length;
+        if (total === 0) return { h1: 0, h5: 0, mrr: 0 };
+        return {
+            h1: (results.filter(r => r.hitAt1).length / total) * 100,
+            h5: (results.filter(r => r.hitAt5).length / total) * 100,
+            mrr: results.reduce((sum, r) => sum + r.mrr, 0) / total
+        };
+    };
+
+    const bMetrics = calcMetrics(baseline);
+    const aMetrics = calcMetrics(augmented);
+
+    console.log('\n' + '='.repeat(60));
+    console.log('              FINAL QUALITY EVALUATION REPORT');
+    console.log('='.repeat(60));
+    console.log(`Metric           Baseline (Img)    Augmented (+P)    Prompt Lift`);
+    console.log('-'.repeat(60));
+    console.log(`Hit@1 Precision  ${bMetrics.h1.toFixed(1).padEnd(17)} ${aMetrics.h1.toFixed(1).padEnd(17)} ${(aMetrics.h1 - bMetrics.h1).toFixed(1)}%`);
+    console.log(`Hit@5 Coverage   ${bMetrics.h5.toFixed(1).padEnd(17)} ${aMetrics.h5.toFixed(1).padEnd(17)} ${(aMetrics.h5 - bMetrics.h5).toFixed(1)}%`);
+    console.log(`Mean MRR         ${bMetrics.mrr.toFixed(4).padEnd(17)} ${aMetrics.mrr.toFixed(4).padEnd(17)} ${(aMetrics.mrr - bMetrics.mrr).toFixed(4)}`);
+    console.log('='.repeat(60));
     console.log(`Report generated on: ${new Date().toLocaleString()}\n`);
 }
 
