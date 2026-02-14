@@ -1,7 +1,7 @@
-# Kassa API Service
+# Inspira AI API Service
 
 ## Overview
-This is the backend service for the Kassa Image Search application. It orchestrates the Two-Stage AI Pipeline:
+This is the backend service for the Inspira AI Image Search application. It orchestrates the Two-Stage AI Pipeline:
 1. **Vision Signal Extraction:** Uses Gemini 2.5 Flash to analyze uploaded images.
 2. **Catalog Retrieval:** Searches a read-only MongoDB catalog using heuristic plans (TEXT, A, B, C, D).
 3. **Reranking:** Uses Gemini 3 Flash to reorder candidates based on relevance.

@@ -1,6 +1,6 @@
-# Backend Agent Context (Kassa API)
+# Backend Agent Context (Inspira AI API)
 
-This document provides context, patterns, and rules for AI Agents working on the Kassa Backend (`apps/api`).
+This document provides context, patterns, and rules for AI Agents working on the Inspira AI Backend (`apps/api`).
 
 ## 🛠 Tech Stack & Tooling
 - **Runtime**: Node.js (Latest LTS)

@@ -1,4 +1,4 @@
-name: Kassa CI
+name: Inspira AI CI
 
 on:
   push:
@@ -52,4 +52,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build API Image
-        run: docker build -t kassa-api:latest apps/api
+        run: docker build -t inspira-api:latest apps/api

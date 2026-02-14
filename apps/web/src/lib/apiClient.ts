@@ -3,7 +3,7 @@ import { ApiResponse, SearchResponseData } from '../types/api';
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 /**
- * API Client for interacting with the Kassa Labs backend.
+ * API Client for interacting with the Inspira AI backend.
  */
 export const apiClient = {
     /**

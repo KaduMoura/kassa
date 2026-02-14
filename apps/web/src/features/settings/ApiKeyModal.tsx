@@ -51,7 +51,7 @@ export function ApiKeyModal({ isOpen, onClose, onSave, currentKey }: ApiKeyModal
                             <span className="text-xs font-bold uppercase tracking-wider">Privacy Guaranteed</span>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                            Your key is stored <strong>only in memory</strong>. It is never saved to a database, local storage, or transmitted anywhere except to the Kassa Labs backend for processing.
+                            Your key is stored <strong>only in memory</strong>. It is never saved to a database, local storage, or transmitted anywhere except to the Inspira AI backend for processing.
                         </p>
                     </div>
 
