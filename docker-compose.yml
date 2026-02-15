@@ -50,3 +50,4 @@ services:
     environment:
       - CI=true
       - NODE_ENV=development
+      - API_URL=http://api:4000
