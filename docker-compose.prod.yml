@@ -6,8 +6,6 @@ services:
     environment:
       - CI=true
       - NODE_ENV=production
-    env_file:
-      - .env
 
   web:
     build:
