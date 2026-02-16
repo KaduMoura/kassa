@@ -93,6 +93,7 @@ export interface SearchResponse {
 export const RerankResultSchema = z.object({
     rankedIds: z.array(z.string()),
     reasons: z.record(z.string(), z.array(z.string())).optional(),
+    matchBands: z.record(z.string(), z.nativeEnum(MatchBand)).optional(),
 });
 
 export type RerankResult = z.infer<typeof RerankResultSchema>;

@@ -25,10 +25,10 @@ export const AdminConfigSchema = z.object({
     maxDescriptionChars: z.number().int().min(1).max(500).default(240),
     rerankOutputK: z.number().int().min(1).max(25).default(10),
     timeoutsMs: z.object({
-        stage1: z.number().int().min(100).max(30000).default(30000),
+        stage1: z.number().int().min(100).max(60000).default(60000),
         mongo: z.number().int().min(100).max(10000).default(2000),
-        repair: z.number().int().min(100).max(30000).default(30000),
-        stage2: z.number().int().min(100).max(60000).default(30000),
+        repair: z.number().int().min(100).max(60000).default(60000),
+        stage2: z.number().int().min(100).max(60000).default(60000),
         total: z.number().int().min(100).max(120000).default(120000),
     }).default({}),
     fallbackStrategy: z.enum(['broad', 'prompt-first', 'vision-first', 'heuristic-only']).default('broad'),

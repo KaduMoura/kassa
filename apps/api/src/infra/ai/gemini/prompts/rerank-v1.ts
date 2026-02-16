@@ -13,14 +13,18 @@ Task:
 2. Prioritize candidates according to the provided Ranking Weights. For example, if 'price' weight is high and 'text' is low, prioritize price proximity over keyword matches.
 3. Rank the candidates from most relevant to least relevant.
 4. Provide a brief reason for the top matches (e.g., "Perfect style match", "Matches both color and material").
+5. Assign a matchBand to each candidate:
+   - HIGH: Strong match in category, style, AND price/dimensions (if specified).
+   - MEDIUM: Partial match (right category but wrong style, or right style but wrong price).
+   - LOW: Weak or irrelevant match.
 
 Constraints:
 - You MUST only use the product IDs provided in the candidate list.
 - Return ONLY a valid JSON object matching this schema:
 {
   "results": [
-    { "id": "id1", "reasons": ["Reason 1", "Reason 2"] },
-    { "id": "id2", "reasons": ["Reason A"] }
+    { "id": "id1", "reasons": ["Reason 1", "Reason 2"], "matchBand": "HIGH" },
+    { "id": "id2", "reasons": ["Reason A"], "matchBand": "MEDIUM" }
   ]
 }
 - Do not invent products.

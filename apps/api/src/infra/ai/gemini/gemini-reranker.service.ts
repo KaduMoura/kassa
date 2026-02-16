@@ -20,9 +20,12 @@ const RERANK_RESPONSE_SCHEMA: Schema = {
                     reasons: {
                         type: SchemaType.ARRAY,
                         items: { type: SchemaType.STRING }
+                    },
+                    matchBand: {
+                        type: SchemaType.STRING,
                     }
                 },
-                required: ["id", "reasons"]
+                required: ["id", "reasons", "matchBand"]
             },
             description: "List of candidates, ordered by relevance"
         }
@@ -89,6 +92,10 @@ export class GeminiCatalogReranker implements CatalogReranker {
                     reasons: rawData.results.reduce((acc: any, curr: any) => {
                         acc[curr.id] = curr.reasons;
                         return acc;
+                    }, {}),
+                    matchBands: rawData.results.reduce((acc: any, curr: any) => {
+                        acc[curr.id] = curr.matchBand;
+                        return acc;
                     }, {})
                 };
 
@@ -108,6 +115,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
                 return {
                     rankedIds: filteredIds,
                     reasons: validated.reasons || {},
+                    matchBands: validated.matchBands || {}
                 };
 
             } catch (error: any) {

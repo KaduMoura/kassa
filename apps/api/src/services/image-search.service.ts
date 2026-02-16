@@ -226,7 +226,11 @@ export class ImageSearchService {
                 const candidateMap = new Map(scoredCandidates.map(c => [c.id, c]));
                 const rerankedCandidates = rerankResult.rankedIds
                     .map(id => candidateMap.get(id))
-                    .filter((c): c is ScoredCandidate => !!c);
+                    .filter((c): c is ScoredCandidate => !!c)
+                    .map(c => ({
+                        ...c,
+                        matchBand: rerankResult.matchBands?.[c.id] ?? c.matchBand
+                    }));
 
                 // Combine reranked with remaining heuristic candidates if needed
                 const rerankedIds = new Set(rerankResult.rankedIds);
