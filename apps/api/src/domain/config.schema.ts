@@ -27,6 +27,7 @@ export const AdminConfigSchema = z.object({
     timeoutsMs: z.object({
         stage1: z.number().int().min(100).max(30000).default(30000),
         mongo: z.number().int().min(100).max(10000).default(2000),
+        repair: z.number().int().min(100).max(30000).default(30000),
         stage2: z.number().int().min(100).max(60000).default(30000),
         total: z.number().int().min(100).max(120000).default(120000),
     }).default({}),

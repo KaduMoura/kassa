@@ -80,7 +80,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
                     rawData = this.parseAndValidate(responseText);
                 } catch (parseError) {
                     console.warn(`[Reranker] Primary JSON invalid on attempt ${attempt}, attempting repair with ${env.GEMINI_MODEL_VISION}...`);
-                    rawData = await this.repairJsonWithFlash2_5(responseText, apiKey, requestId);
+                    rawData = await this.repairJsonWithFlash2_5(responseText, apiKey, requestId, input.config?.repairTimeoutMs);
                 }
 
                 // If we reach here, we have rawData (either from primary or repair)
@@ -151,6 +151,7 @@ export class GeminiCatalogReranker implements CatalogReranker {
         malformedJson: string,
         apiKey: string,
         requestId: string,
+        timeoutMs?: number,
         maxRetries = env.AI_RETRY_MAX
     ): Promise<any> {
         const genAI = createGeminiClient(apiKey);
@@ -176,13 +177,23 @@ export class GeminiCatalogReranker implements CatalogReranker {
                 console.log(`[LLM Repair] SYSTEM MESSAGE: ${systemMessage}`);
                 console.log(`[LLM Repair] USER PROMPT: ${userPrompt}`);
 
-                const result = await model.generateContent({
+                const generatePromise = model.generateContent({
                     contents: [{
                         role: 'user',
                         parts: [{ text: userPrompt }],
                     }],
                     generationConfig,
                 });
+
+                let result;
+                if (timeoutMs) {
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new AiError(AiErrorCode.PROVIDER_TIMEOUT, `Repair timed out after ${timeoutMs}ms`)), timeoutMs)
+                    );
+                    result = (await Promise.race([generatePromise, timeoutPromise])) as any;
+                } else {
+                    result = await generatePromise;
+                }
 
                 const fixedText = result.response.text();
                 console.log(`[LLM Repair] RESULT: ${fixedText}`);

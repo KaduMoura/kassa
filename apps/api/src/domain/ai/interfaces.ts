@@ -4,6 +4,7 @@ export interface AiConfig {
     temperature?: number;
     maxOutputTokens?: number;
     timeoutMs?: number;
+    repairTimeoutMs?: number;
 }
 
 export interface VisionSignalExtractorInput {
