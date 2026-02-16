@@ -36,6 +36,17 @@ ${JSON.stringify(signals, null, 2)}
 ${userPrompt || "Find products similar to the image."}
 `;
 
+  if (signals.intent) {
+    const { priceMin, priceMax, preferredWidth, preferredHeight, preferredDepth } = signals.intent;
+    prompt += `
+--- CONSTRAINTS (from user prompt) ---
+${priceMin || priceMax ? `Price: ${priceMin || 0}$ - ${priceMax || 'any'}$` : ''}
+${preferredWidth ? `Width: approx ${preferredWidth}cm` : ''}
+${preferredHeight ? `Height: approx ${preferredHeight}cm` : ''}
+${preferredDepth ? `Depth: approx ${preferredDepth}cm` : ''}
+`;
+  }
+
   if (weights) {
     prompt += `
 --- RANKING WEIGHTS (ADMIN) ---
@@ -51,6 +62,9 @@ ${JSON.stringify(candidates.map(c => ({
     category: c.category,
     type: c.type,
     price: c.price,
+    width: c.width,
+    height: c.height,
+    depth: c.depth,
     desc: c.description.substring(0, 200)
   })), null, 2)}
 `;

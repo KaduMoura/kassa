@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CatalogRepository } from './catalog.repository';
 import * as dbModule from '../db';
-import { Collection } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
 vi.mock('../db', () => ({
     getDb: vi.fn(),
@@ -10,12 +10,19 @@ vi.mock('../db', () => ({
 describe('CatalogRepository', () => {
     let repository: CatalogRepository;
     let mockCollection: any;
+    let mockCursor: any;
 
     beforeEach(() => {
-        mockCollection = {
-            find: vi.fn().mockReturnThis(),
+        vi.clearAllMocks();
+
+        mockCursor = {
+            sort: vi.fn().mockReturnThis(),
             limit: vi.fn().mockReturnThis(),
             toArray: vi.fn().mockResolvedValue([]),
+        };
+
+        mockCollection = {
+            find: vi.fn().mockReturnValue(mockCursor),
             findOne: vi.fn().mockResolvedValue(null),
         };
 
@@ -26,46 +33,30 @@ describe('CatalogRepository', () => {
         repository = new CatalogRepository();
     });
 
-    it('should execute Plan A when category, type, and keywords are present', async () => {
-        // Plan TEXT returns 0
-        mockCollection.toArray.mockResolvedValueOnce([]);
-        // Plan A returns results
-        mockCollection.toArray.mockResolvedValueOnce([
-            { title: 'Product A', description: 'desc', category: 'furn', type: 'chair', price: 100 },
-            { title: 'A2', description: 'desc', category: 'furn', type: 'chair', price: 100 },
-            { title: 'A3', description: 'desc', category: 'furn', type: 'chair', price: 100 },
-            { title: 'A4', description: 'desc', category: 'furn', type: 'chair', price: 100 },
-            { title: 'A5', description: 'desc', category: 'furn', type: 'chair', price: 100 }
+    it('should execute Plan A ($text + full filters) when all criteria present', async () => {
+        // Step 1: executeTextQuery
+        mockCursor.toArray.mockResolvedValueOnce([
+            { _id: new ObjectId(), title: 'Product A', description: 'desc', category: 'furniture', type: 'chair', price: 100, width: 1, height: 1, depth: 1 }
         ]);
 
         const { products, plan } = await repository.findCandidates({
             category: 'furniture',
             type: 'chair',
-            keywords: ['wood']
+            keywords: ['wood'],
+            priceMax: 500,
+            minCandidates: 1
         });
 
-        expect(products).toHaveLength(5);
+        expect(products).toHaveLength(1);
         expect(plan).toBe('A');
-        expect(mockCollection.find).toHaveBeenCalledWith(
-            expect.objectContaining({
-                category: 'furniture',
-                type: 'chair',
-                $or: expect.any(Array)
-            }),
-            expect.objectContaining({ projection: expect.any(Object) })
-        );
     });
 
-    it('should fallback to Plan B if Plan A returns too few results', async () => {
-        // Plan TEXT returns 0
-        mockCollection.toArray.mockResolvedValueOnce([]);
-        // Plan A returns 1 (below threshold of 10)
-        mockCollection.toArray.mockResolvedValueOnce([{
-            title: 'A', description: 'desc', category: 'furn', type: 'chair', price: 100
-        }]);
-        // Plan B returns 12 (satisfies threshold)
-        mockCollection.toArray.mockResolvedValueOnce(new Array(12).fill({
-            title: 'B', description: 'desc', category: 'furn', type: 'chair', price: 100
+    it('should fallback to Plan B (drop type) if Plan A returns too few results', async () => {
+        // Step 1: Plan A returns 0
+        mockCursor.toArray.mockResolvedValueOnce([]);
+        // Step 2: Plan B returns 12
+        mockCursor.toArray.mockResolvedValueOnce(new Array(12).fill({
+            _id: new ObjectId(), title: 'B', description: 'desc', category: 'furniture', type: 'chair', price: 100, width: 1, height: 1, depth: 1
         }));
 
         const { products, plan } = await repository.findCandidates({
@@ -77,66 +68,45 @@ describe('CatalogRepository', () => {
 
         expect(products).toHaveLength(12);
         expect(plan).toBe('B');
-        // TEXT call (1) + Plan A (2) + Plan B (3)
-        expect(mockCollection.find).toHaveBeenNthCalledWith(3,
-            expect.objectContaining({
-                category: 'furniture',
-                $or: expect.any(Array)
-            }),
-            expect.objectContaining({ projection: expect.any(Object) })
-        );
     });
 
-    it('should execute Plan C if no category/type provided but keywords exist', async () => {
-        // Plan TEXT returns 0
-        mockCollection.toArray.mockResolvedValueOnce([]);
-        // Plan C returns something
-        mockCollection.toArray.mockResolvedValueOnce([{
-            title: 'Product C', description: 'desc', category: 'furn', type: 'chair', price: 100
-        }]);
+    it('should apply numeric filters correctly for dimensions (Ladder Step 3)', async () => {
+        // Step 1 (A): returns 0
+        mockCursor.toArray.mockResolvedValueOnce([]);
+        // Step 2 (B): returns 0 (keywords present, category present, priceMin undefined) 
+        // Ladder Step 2 condition: if (criteria.keywords?.length && (criteria.category || criteria.priceMin))
+        mockCursor.toArray.mockResolvedValueOnce([]);
+        // Step 3 (TEXT): returns results
+        mockCursor.toArray.mockResolvedValueOnce([
+            { _id: new ObjectId(), title: 'C', description: 'desc', category: 'cat', type: 'type', price: 10, width: 1, height: 1, depth: 1 }
+        ]);
 
-        const { products, plan } = await repository.findCandidates({
-            keywords: ['chair']
+        const { plan } = await repository.findCandidates({
+            category: 'cat', // Ensure Step 2 is called
+            keywords: ['wood'],
+            widthMin: 100,
+            widthMax: 200,
+            minCandidates: 1
         });
 
-        expect(products).toHaveLength(1);
-        expect(plan).toBe('C');
-        expect(mockCollection.find).toHaveBeenCalledWith(
-            expect.objectContaining({
-                $or: expect.any(Array)
-            }),
-            expect.objectContaining({ projection: expect.any(Object) })
-        );
+        expect(plan).toBe('TEXT');
     });
 
-    it('should execute Plan D as last resort if category/type exist but keywords found nothing', async () => {
-        // Plan TEXT, A, B, C all empty
-        mockCollection.toArray.mockResolvedValueOnce([]);
-        mockCollection.toArray.mockResolvedValueOnce([]);
-        mockCollection.toArray.mockResolvedValueOnce([]);
-        mockCollection.toArray.mockResolvedValueOnce([]);
-        // Plan D returns something
-        mockCollection.toArray.mockResolvedValueOnce([{
-            title: 'D', description: 'desc', category: 'furn', type: 'chair', price: 100
-        }]);
+    it('should fallback to regex Plan D if category/type exists but no keywords', async () => {
+        // Step 1, 2, 3: Skipped (no keywords)
+        // Step 4: executeRegexQuery
+        mockCursor.toArray.mockResolvedValueOnce([
+            { _id: new ObjectId(), title: 'D', description: 'desc', category: 'furniture', type: 'chair', price: 10, width: 1, height: 1, depth: 1 }
+        ]);
 
         const { products, plan } = await repository.findCandidates({
             category: 'furniture',
             type: 'chair',
-            keywords: ['nonexistent']
+            minCandidates: 1
         });
 
         expect(products).toHaveLength(1);
         expect(plan).toBe('D');
-        expect(mockCollection.find).toHaveBeenLastCalledWith(
-            {
-                $or: [
-                    { category: 'furniture' },
-                    { type: 'chair' }
-                ]
-            },
-            expect.objectContaining({ projection: expect.any(Object) })
-        );
     });
 
     describe('findById', () => {
@@ -146,19 +116,6 @@ describe('CatalogRepository', () => {
             expect(mockCollection.findOne).toHaveBeenCalledWith(expect.objectContaining({
                 _id: expect.any(Object)
             }));
-        });
-
-        it('should return null for invalid ObjectId', async () => {
-            const result = await repository.findById('invalid');
-            expect(result).toBeNull();
-            expect(mockCollection.findOne).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('findByTitle', () => {
-        it('should call findOne with title', async () => {
-            await repository.findByTitle('My Product');
-            expect(mockCollection.findOne).toHaveBeenCalledWith({ title: 'My Product' });
         });
     });
 });

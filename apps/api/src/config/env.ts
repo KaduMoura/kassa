@@ -3,6 +3,8 @@ import * as dotenv from 'dotenv';
 
 
 // Load .env from root or current directory
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 dotenv.config();
 
 const envSchema = z.object({

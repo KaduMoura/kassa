@@ -1,4 +1,4 @@
-import { Db, Collection, Filter, ObjectId } from 'mongodb';
+import { Collection, Filter, ObjectId } from 'mongodb';
 import { Product, SearchCriteria, ProductSchema } from '../../domain/product';
 import { RetrievalPlan } from '../../domain/ai/schemas';
 import { getDb } from '../db';
@@ -12,65 +12,151 @@ export class CatalogRepository {
 
     /**
      * Main candidate retrieval logic with relaxation ladder.
+     * Uses $text search as primary + numeric filters.
      */
     async findCandidates(criteria: SearchCriteria): Promise<{ products: Product[], plan: RetrievalPlan }> {
         const limit = criteria.limit || 60;
         const minCandidates = criteria.minCandidates || 10;
 
-        // Try Plan TEXT first if keywords available
+        // Ladder Step 1: $text + category + type + price/dims
         if (criteria.keywords?.length) {
             try {
-                const results = await this.executePlanText(criteria, limit);
-                if (results.length >= minCandidates) return { products: results, plan: 'TEXT' };
+                const results = await this.executeTextQuery(criteria, limit, {
+                    includeCategory: true,
+                    includeType: true,
+                    includeNumeric: true
+                });
+                if (results.length >= minCandidates) return { products: results, plan: 'A' as any };
             } catch (error) {
-                // $text search might fail if index is missing (read-only prevents us from creating it)
-                // Fallback silently to regex plans
+                console.warn('[CatalogRepository] Text query failed, falling back to regex ladder', error);
             }
         }
 
-        // Keep track of best results so far
-        let lastResults: Product[] = [];
-        let lastPlan: RetrievalPlan = 'D';
-
-        // Plan A: Category + Type + Keywords (High Precision)
-        if (criteria.category && criteria.type && criteria.keywords?.length) {
-            const results = await this.executePlanA(criteria, limit);
-            if (results.length >= minCandidates) return { products: results, plan: 'A' };
-            lastResults = results;
-            lastPlan = 'A';
+        // Ladder Step 2: $text + category + price/dims (dropped type)
+        if (criteria.keywords?.length && (criteria.category || criteria.priceMin)) {
+            const results = await this.executeTextQuery(criteria, limit, {
+                includeCategory: true,
+                includeType: false,
+                includeNumeric: true
+            });
+            if (results.length >= minCandidates) return { products: results, plan: 'B' as any };
         }
 
-        // Plan B: Category + Keywords (Balanced)
-        if (criteria.category && criteria.keywords?.length) {
-            const results = await this.executePlanB(criteria, limit);
-            if (results.length >= minCandidates) return { products: results, plan: 'B' };
-            if (results.length > lastResults.length) {
-                lastResults = results;
-                lastPlan = 'B';
-            }
-        }
-
-        // Plan C: Broad Keyword Search (Recall focus)
+        // Ladder Step 3: $text + price/dims (dropped category)
         if (criteria.keywords?.length) {
-            const results = await this.executePlanC(criteria, limit);
-            if (results.length >= minCandidates) return { products: results, plan: 'C' };
-            if (results.length > lastResults.length) {
-                lastResults = results;
-                lastPlan = 'C';
-            }
+            const results = await this.executeTextQuery(criteria, limit, {
+                includeCategory: false,
+                includeType: false,
+                includeNumeric: true
+            });
+            if (results.length >= minCandidates) return { products: results, plan: 'TEXT' as any };
         }
 
-        // Plan D: Category + Type matching (Fallback)
+        // Ladder Step 4: Category + Type (no text)
         if (criteria.category || criteria.type) {
-            const results = await this.executePlanD(criteria, limit);
-            if (results.length >= minCandidates) return { products: results, plan: 'D' };
-            if (results.length > lastResults.length) {
-                lastResults = results;
-                lastPlan = 'D';
+            const results = await this.executeRegexQuery(criteria, limit, {
+                includeText: false,
+                includeCategory: true,
+                includeType: true,
+                includeNumeric: false
+            });
+            if (results.length >= minCandidates) return { products: results, plan: 'D' as any };
+        }
+
+        // Ladder Step 5: Keywords only (last resort for text)
+        if (criteria.keywords?.length) {
+            const results = await this.executeTextQuery(criteria, limit, {
+                includeCategory: false,
+                includeType: false,
+                includeNumeric: false
+            });
+            return { products: results, plan: 'C' as any };
+        }
+
+        return { products: [], plan: 'D' as any };
+    }
+
+    private async executeTextQuery(
+        criteria: SearchCriteria,
+        limit: number,
+        options: { includeCategory: boolean, includeType: boolean, includeNumeric: boolean }
+    ): Promise<Product[]> {
+        const query: Filter<Product> = {
+            $text: { $search: criteria.keywords!.join(' ') }
+        };
+
+        if (options.includeCategory && criteria.category) {
+            query.category = criteria.category;
+        }
+        if (options.includeType && criteria.type) {
+            query.type = criteria.type;
+        }
+        if (options.includeNumeric) {
+            Object.assign(query, this.buildNumericFilters(criteria));
+        }
+
+        const docs = await this.collection.find(query, {
+            projection: { ...this.getProjection(), score: { $meta: 'textScore' } }
+        })
+            .sort({ score: { $meta: 'textScore' } })
+            .limit(limit)
+            .toArray();
+
+        return this.validateAndParse(docs);
+    }
+
+    private async executeRegexQuery(
+        criteria: SearchCriteria,
+        limit: number,
+        options: { includeText: boolean, includeCategory: boolean, includeType: boolean, includeNumeric: boolean }
+    ): Promise<Product[]> {
+        const query: Filter<Product> = {};
+
+        if (options.includeCategory && criteria.category) {
+            query.category = criteria.category;
+        }
+        if (options.includeType && criteria.type) {
+            query.type = criteria.type;
+        }
+        if (options.includeNumeric) {
+            Object.assign(query, this.buildNumericFilters(criteria));
+        }
+
+        if (options.includeText && criteria.keywords?.length) {
+            query.$or = criteria.keywords.map(kw => ({
+                $or: [
+                    { title: { $regex: kw, $options: 'i' } },
+                    { description: { $regex: kw, $options: 'i' } }
+                ]
+            }));
+        }
+
+        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
+        return this.validateAndParse(docs);
+    }
+
+    private buildNumericFilters(criteria: SearchCriteria): Filter<Product> {
+        const filters: any = {};
+
+        if (criteria.priceMin !== undefined || criteria.priceMax !== undefined) {
+            filters.price = {};
+            if (criteria.priceMin !== undefined) filters.price.$gte = criteria.priceMin;
+            if (criteria.priceMax !== undefined) filters.price.$lte = criteria.priceMax;
+        }
+
+        const dimFields = ['width', 'height', 'depth'] as const;
+        for (const field of dimFields) {
+            const minKey = `${field}Min` as keyof SearchCriteria;
+            const maxKey = `${field}Max` as keyof SearchCriteria;
+
+            if (criteria[minKey] !== undefined || criteria[maxKey] !== undefined) {
+                filters[field] = {};
+                if (criteria[minKey] !== undefined) filters[field].$gte = criteria[minKey];
+                if (criteria[maxKey] !== undefined) filters[field].$lte = criteria[maxKey];
             }
         }
 
-        return { products: lastResults, plan: lastPlan };
+        return filters;
     }
 
     private async validateAndParse(docs: any[]): Promise<Product[]> {
@@ -80,20 +166,10 @@ export class CatalogRepository {
             if (result.success) {
                 validProducts.push(result.data);
             } else {
-                // Log and discard invalid docs to prevent pipeline crashes
                 console.warn(`[CatalogRepository] Discarding invalid product document ${doc._id}:`, result.error.format());
             }
         }
         return validProducts;
-    }
-
-    private async executePlanText(criteria: SearchCriteria, limit: number): Promise<Product[]> {
-        if (!criteria.keywords?.length) return [];
-        const query: Filter<Product> = {
-            $text: { $search: criteria.keywords.join(' ') }
-        };
-        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
-        return this.validateAndParse(docs);
     }
 
     private getProjection() {
@@ -110,71 +186,11 @@ export class CatalogRepository {
         };
     }
 
-    private async executePlanA(criteria: SearchCriteria, limit: number): Promise<Product[]> {
-        const query: Filter<Product> = {
-            category: criteria.category,
-            type: criteria.type,
-            $or: criteria.keywords?.map(kw => ({
-                $or: [
-                    { title: { $regex: kw, $options: 'i' } },
-                    { description: { $regex: kw, $options: 'i' } }
-                ]
-            })) || []
-        };
-
-        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
-        return this.validateAndParse(docs);
-    }
-
-    private async executePlanB(criteria: SearchCriteria, limit: number): Promise<Product[]> {
-        const query: Filter<Product> = {
-            category: criteria.category,
-            $or: criteria.keywords?.map(kw => ({
-                $or: [
-                    { title: { $regex: kw, $options: 'i' } },
-                    { description: { $regex: kw, $options: 'i' } }
-                ]
-            })) || []
-        };
-
-        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
-        return this.validateAndParse(docs);
-    }
-
-    private async executePlanC(criteria: SearchCriteria, limit: number): Promise<Product[]> {
-        if (!criteria.keywords?.length) return [];
-
-        const query: Filter<Product> = {
-            $or: criteria.keywords.map(kw => ({
-                $or: [
-                    { title: { $regex: kw, $options: 'i' } },
-                    { description: { $regex: kw, $options: 'i' } }
-                ]
-            }))
-        };
-
-        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
-        return this.validateAndParse(docs);
-    }
-
-    private async executePlanD(criteria: SearchCriteria, limit: number): Promise<Product[]> {
-        const filters: Filter<Product>[] = [];
-        if (criteria.category) filters.push({ category: criteria.category });
-        if (criteria.type) filters.push({ type: criteria.type });
-
-        if (filters.length === 0) return [];
-
-        const query: Filter<Product> = { $or: filters };
-
-        const docs = await this.collection.find(query, { projection: this.getProjection() }).limit(limit).toArray();
-        return this.validateAndParse(docs);
-    }
-
     async findById(id: string): Promise<Product | null> {
         try {
             return this.collection.findOne({ _id: new ObjectId(id) } as any);
         } catch {
-            return null; // Invalid ObjectId
+            return null;
         }
     }
 

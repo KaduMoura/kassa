@@ -19,6 +19,14 @@ export interface SearchCriteria {
     category?: string;
     type?: string;
     keywords?: string[];
+    priceMin?: number;
+    priceMax?: number;
+    widthMin?: number;
+    widthMax?: number;
+    heightMin?: number;
+    heightMax?: number;
+    depthMin?: number;
+    depthMax?: number;
     limit?: number;
     minCandidates?: number;
 }

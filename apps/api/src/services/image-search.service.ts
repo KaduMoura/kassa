@@ -130,6 +130,14 @@ export class ImageSearchService {
             category: useStrictFilters ? signals.categoryGuess.value : undefined,
             type: useStrictFilters && signals.typeGuess.confidence >= config.minTypeConfidence ? signals.typeGuess.value : undefined,
             keywords: signals.keywords.slice(0, config.maxKeywordsForRetrieval),
+            priceMin: signals.intent?.priceMin,
+            priceMax: signals.intent?.priceMax,
+            widthMin: signals.intent?.preferredWidth ? Math.floor(signals.intent.preferredWidth * 0.7) : undefined,
+            widthMax: signals.intent?.preferredWidth ? Math.ceil(signals.intent.preferredWidth * 1.3) : undefined,
+            heightMin: signals.intent?.preferredHeight ? Math.floor(signals.intent.preferredHeight * 0.7) : undefined,
+            heightMax: signals.intent?.preferredHeight ? Math.ceil(signals.intent.preferredHeight * 1.3) : undefined,
+            depthMin: signals.intent?.preferredDepth ? Math.floor(signals.intent.preferredDepth * 0.7) : undefined,
+            depthMax: signals.intent?.preferredDepth ? Math.ceil(signals.intent.preferredDepth * 1.3) : undefined,
             limit: config.candidateTopN,
             minCandidates: config.minCandidates
         });
